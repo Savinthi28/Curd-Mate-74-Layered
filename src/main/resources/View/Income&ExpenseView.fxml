@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane fx:id="ancIncomeExpense" prefHeight="587.0" prefWidth="973.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lk.ijse.desktop.myfx.myfinalproject.Controller.IncomeExpenseController">
+   <children>
+      <VBox prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+      <ImageView fitHeight="250.0" fitWidth="344.0" layoutX="128.0" layoutY="161.0" onMouseClicked="#onIncome" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/png-transparent-expense-management-organization-perceptual-mapping-contract-management-spend-text-hand-logo-thumbnail.png" />
+         </image>
+      </ImageView>
+      <ImageView fitHeight="250.0" fitWidth="299.0" layoutX="525.0" layoutY="161.0" onMouseClicked="#onExpense" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/8910710.png" />
+         </image>
+      </ImageView>
+      <Label layoutX="128.0" layoutY="68.0" prefHeight="66.0" prefWidth="250.0" text="Daily Income">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <padding>
+            <Insets left="30.0" />
+         </padding>
+      </Label>
+      <Label layoutX="516.0" layoutY="68.0" prefHeight="66.0" prefWidth="250.0" text="Daily Expense">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <padding>
+            <Insets left="30.0" />
+         </padding>
+      </Label>
+   </children>
+</AnchorPane>

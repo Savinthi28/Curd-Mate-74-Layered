@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane fx:id="ancCurdProductionStock" prefHeight="573.0" prefWidth="956.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lk.ijse.desktop.myfx.myfinalproject.Controller.CurdProductionStockController">
+   <children>
+      <VBox prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+      <ImageView fitHeight="238.0" fitWidth="301.0" layoutX="100.0" layoutY="212.0" onMouseClicked="#onCurdProduction" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/curd.jpg" />
+         </image>
+      </ImageView>
+      <ImageView fitHeight="201.0" fitWidth="309.0" layoutX="537.0" layoutY="212.0" onMouseClicked="#onStock" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/360_F_1085456250_rGrrn8Qsbv8aSUKQqnKZdmFaO8xTrm42.jpg" />
+         </image>
+      </ImageView>
+      <Label layoutX="91.0" layoutY="86.0" prefHeight="76.0" prefWidth="319.0" text="Curd Production">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <padding>
+            <Insets left="30.0" />
+         </padding>
+      </Label>
+      <Label layoutX="532.0" layoutY="86.0" prefHeight="76.0" prefWidth="319.0" text="Milk Stock">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <padding>
+            <Insets left="80.0" />
+         </padding>
+      </Label>
+   </children>
+</AnchorPane>

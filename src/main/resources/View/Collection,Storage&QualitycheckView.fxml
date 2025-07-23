@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane fx:id="ancCollectionStorageQuality" prefHeight="600.0" prefWidth="1000.0" style="-fx-background-color: #f5f7fa;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lk.ijse.desktop.myfx.myfinalproject.Controller.CollectionStorageQualitycheckController">
+   <children>
+      <VBox alignment="TOP_CENTER" spacing="50.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <padding>
+            <Insets top="40.0" bottom="40.0" />
+         </padding>
+
+         <HBox alignment="CENTER" spacing="100.0">
+            <VBox alignment="CENTER" spacing="20.0">
+               <Label text="Milk Collection" style="-fx-text-fill: #2c3e50;">
+                  <font>
+                     <Font name="System Bold" size="28.0" />
+                  </font>
+               </Label>
+               <ImageView fitHeight="200.0" fitWidth="250.0" onMouseClicked="#onMilkCollection" pickOnBounds="true" preserveRatio="true">
+                  <image>
+                     <Image url="@../images/ChatGPT%20Image%20May%207,%202025,%2001_27_00%20PM.png" />
+                  </image>
+                  <VBox.margin>
+                     <Insets />
+                  </VBox.margin>
+               </ImageView>
+            </VBox>
+
+            <VBox alignment="CENTER" spacing="20.0">
+               <Label text="Milk Storage" style="-fx-text-fill: #2c3e50;">
+                  <font>
+                     <Font name="System Bold" size="28.0" />
+                  </font>
+               </Label>
+               <ImageView fitHeight="200.0" fitWidth="200.0" onMouseClicked="#onMilkStorage" pickOnBounds="true" preserveRatio="true">
+                  <image>
+                     <Image url="@../images/milkstorage%20logo.png" />
+                  </image>
+               </ImageView>
+            </VBox>
+
+            <VBox alignment="CENTER" spacing="20.0">
+               <Label text="Quality Check" style="-fx-text-fill: #2c3e50;">
+                  <font>
+                     <Font name="System Bold" size="28.0" />
+                  </font>
+               </Label>
+               <ImageView fitHeight="200.0" fitWidth="210.0" onMouseClicked="#onQualityCheck" pickOnBounds="true" preserveRatio="true">
+                  <image>
+                     <Image url="@../images/milkcheck%20logo.jpg" />
+                  </image>
+               </ImageView>
+            </VBox>
+         </HBox>
+      </VBox>
+   </children>
+</AnchorPane>

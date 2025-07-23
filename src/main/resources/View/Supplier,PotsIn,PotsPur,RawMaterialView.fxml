@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane fx:id="ancSupplier" prefHeight="665.0" prefWidth="891.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lk.ijse.desktop.myfx.myfinalproject.Controller.SupplierPotsInPotsPurRawMaterialController">
+   <children>
+      <VBox prefHeight="200.0" prefWidth="100.0" AnchorPane.rightAnchor="791.0" AnchorPane.topAnchor="0.0" />
+      <ImageView fitHeight="192.0" fitWidth="254.0" layoutX="145.0" layoutY="105.0" onMouseClicked="#onSupplier" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/10753547.png" />
+         </image>
+      </ImageView>
+      <ImageView fitHeight="268.0" fitWidth="270.0" layoutX="521.0" layoutY="119.0" onMouseClicked="#onPotsInventory" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/41Q6mMhFA8L._AC_SY350_QL15_.jpg" />
+         </image>
+      </ImageView>
+      <Label layoutX="116.0" layoutY="36.0" prefHeight="57.0" prefWidth="250.0" text="Supplier">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <padding>
+            <Insets left="50.0" />
+         </padding>
+      </Label>
+      <ImageView fitHeight="218.0" fitWidth="230.0" layoutX="116.0" layoutY="411.0" onMouseClicked="#onRawMaterial" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/images.png" />
+         </image>
+      </ImageView>
+      <ImageView fitHeight="224.0" fitWidth="270.0" layoutX="530.0" layoutY="411.0" onMouseClicked="#onPotsPurchase" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../images/84426.png" />
+         </image>
+      </ImageView>
+      <Label layoutX="503.0" layoutY="48.0" prefHeight="57.0" prefWidth="307.0" text="Pots Inventory">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <padding>
+            <Insets left="50.0" />
+         </padding>
+      </Label>
+      <Label layoutX="10.0" layoutY="323.0" prefHeight="57.0" prefWidth="428.0" text="Raw Material Purchase">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <padding>
+            <Insets left="50.0" />
+         </padding>
+      </Label>
+      <Label layoutX="503.0" layoutY="333.0" prefHeight="57.0" prefWidth="307.0" text="Pots Purchase">
+         <font>
+            <Font name="System Bold" size="36.0" />
+         </font>
+         <padding>
+            <Insets left="50.0" />
+         </padding>
+      </Label>
+   </children>
+</AnchorPane>
