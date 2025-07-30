@@ -12,6 +12,10 @@ import javafx.scene.input.MouseEvent;
 import lk.ijse.desktop.myfx.myfinalproject.DBConnection.DBConnection;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.CustomerDto;
 import lk.ijse.desktop.myfx.myfinalproject.Model.CustomerModel;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOFactory;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOTypes;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.CustomerBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.DuplicateException;
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.view.JasperViewer;
 
@@ -66,6 +70,8 @@ public class CustomerController implements Initializable {
     private final String namePattern = "^[A-Za-z ]+$";
     private final String numberPattern = "^0\\d{9}$";
 
+    private ObservableList<CustomerDto> data = FXCollections.observableArrayList();
+    private final CustomerBO customerBO = BOFactory.getInstance().getBO(BOTypes.CUSTOMER);
 
     @FXML
     void btnClearOnAction(ActionEvent event) throws SQLException {
@@ -121,17 +127,11 @@ public class CustomerController implements Initializable {
         if (isValidName && isValidNumber) {
             CustomerDto customerDto = new CustomerDto(lblId.getText(), name, address, number);
             try {
-                CustomerModel customerModel = new CustomerModel();
-                boolean isSave = customerModel.saveCustomer(customerDto);
-                if (isSave) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Customer Saved Successfully!").show();
-                }else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to save customer.").show();
-                }
-            }catch (Exception e){
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "An error occurred while saving customer: " + e.getMessage()).show();
+                customerBO.saveCustomer(customerDto);
+                new Alert(Alert.AlertType.INFORMATION, "Customer has been saved successfully!").show();
+               clearFields();
+            }catch (DuplicateException e){
+                new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
             }
         } else {
             new Alert(Alert.AlertType.WARNING, "Please ensure Customer Name (letters only) and Contact Number (10 digits starting with 0) are valid.").show();
