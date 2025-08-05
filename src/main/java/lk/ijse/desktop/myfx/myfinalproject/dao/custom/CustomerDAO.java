@@ -11,11 +11,13 @@ import java.util.Optional;
 public interface CustomerDAO extends CurdDAO<Customer, String> {
     List<Customer> getAll() throws SQLException;
 
-    Optional<Customer> findById(String customerId);
+    Optional<Customer> findById(String customerId) throws SQLException;
 
-    Optional<Customer> findCustomerByContactNumber(String customerNumber);
+    Optional<Customer> findCustomerByContactNumber(String customerNumber) throws SQLException;
 
     boolean save(Customer customer) throws SQLException;
 
-    String getNextId();
+    String getNextId() throws SQLException;
+
+    String findCustomerNameById(String id) throws SQLException;
 }

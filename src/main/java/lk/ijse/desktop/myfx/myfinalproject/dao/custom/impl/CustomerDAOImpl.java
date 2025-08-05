@@ -16,27 +16,43 @@ public class CustomerDAOImpl implements CustomerDAO {
     @Override
     public List<Customer> getAll() throws SQLException {
         ResultSet ts = SQLUtil.execute("SELECT * FROM Customer");
-
         List<Customer> list = new ArrayList<>();
         while (ts.next()) {
-            Customer customer = new Customer(
+            list.add(new Customer(
                     ts.getString("Customer_ID"),
                     ts.getString("Customer_Name"),
                     ts.getString("Address"),
                     ts.getString("Customer_Number")
-            );
-            list.add(customer);
+            ));
         }
         return list;
     }
 
     @Override
-    public Optional<Customer> findById(String customerId) {
+    public Optional<Customer> findById(String customerId) throws SQLException {
+        ResultSet resultSet = SQLUtil.execute("SELECT * FROM Customer WHERE Customer_ID = ?", customerId);
+        if (resultSet.next()) {
+            return Optional.of(new Customer(
+                    resultSet.getString("Customer_ID"),
+                    resultSet.getString("Customer_Name"),
+                    resultSet.getString("Address"),
+                    resultSet.getString("Customer_Number")
+            ));
+        }
         return Optional.empty();
     }
 
     @Override
-    public Optional<Customer> findCustomerByContactNumber(String customerNumber) {
+    public Optional<Customer> findCustomerByContactNumber(String customerNumber) throws SQLException {
+        ResultSet resultSet = SQLUtil.execute("SELECT * FROM Customer WHERE Customer_Number = ?", customerNumber);
+        if (resultSet.next()) {
+            return Optional.of(new Customer(
+                    resultSet.getString("Customer_ID"),
+                    resultSet.getString("Customer_Name"),
+                    resultSet.getString("Address"),
+                    resultSet.getString("Customer_Number")
+            ));
+        }
         return Optional.empty();
     }
 
@@ -53,21 +69,51 @@ public class CustomerDAOImpl implements CustomerDAO {
 
     @Override
     public boolean update(Customer customer) throws SQLException {
-        return false;
+        return SQLUtil.execute(
+                "update Customer set Customer_Name = ?, Address = ?, Customer_Number = ? where Customer_ID = ?",
+                customer.getCustomerName(),
+                customer.getAddress(),
+                customer.getCustomerNumber(),
+                customer.getCustomerId()
+        );
     }
 
     @Override
     public boolean delete(String id) throws SQLException {
-        return false;
+        return SQLUtil.execute("delete from Customer where Customer_ID = ?", id);
     }
 
     @Override
     public List<String> getAllIds() throws SQLException {
-        return List.of();
+        ResultSet resultSet = SQLUtil.execute("SELECT customer_id FROM customers");
+        List<String> ids = new ArrayList<>();
+        while (resultSet.next()) {
+            ids.add(resultSet.getString(1));
+        }
+        return ids;
     }
 
     @Override
-    public String getNextId() {
-        return "";
+    public String getNextId() throws SQLException {
+        ResultSet resultSet = SQLUtil.execute("SELECT Customer_ID FROM Customer ORDER BY Customer_ID DESC LIMIT 1");
+        char tableChar = 'C';
+        if (resultSet.next()) {
+            String lastId = resultSet.getString(1);
+            String lastIdNumberString = lastId.substring(1);
+            int lastIdNumber = Integer.parseInt(lastIdNumberString);
+            int nextIdNumber = lastIdNumber + 1;
+            return String.format(tableChar + "%03d", nextIdNumber);
+        }
+        return tableChar + "001";
+    }
+
+    @Override
+    public String findCustomerNameById(String id) throws SQLException {
+        ResultSet rst = SQLUtil.execute("select Customer_Name from Customer where Customer_ID =?", id);
+        if (rst.next()) {
+            return rst.getString("Customer_Name");
+        } else {
+            return null;
+        }
     }
 }

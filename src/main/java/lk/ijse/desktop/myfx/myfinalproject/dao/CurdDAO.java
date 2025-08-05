@@ -13,9 +13,9 @@ public interface CurdDAO<T, S> extends SuperDAO {
 
     boolean update(T t) throws SQLException;
 
-    boolean delete(String id) throws SQLException;
+    boolean delete(S id) throws SQLException;
 
-    List<String> getAllIds() throws SQLException;
+    List<S> getAllIds() throws SQLException;
 
-    Optional<T> findById(String id) throws SQLException;
+    Optional<T> findById(S id) throws SQLException;
 }
