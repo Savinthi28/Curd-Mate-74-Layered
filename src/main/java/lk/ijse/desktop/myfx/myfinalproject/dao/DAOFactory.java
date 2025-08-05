@@ -1,6 +1,7 @@
 package lk.ijse.desktop.myfx.myfinalproject.dao;
 
 import lk.ijse.desktop.myfx.myfinalproject.bo.custom.impl.CustomerBOImpl;
+import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.BuffaloDAOImpl;
 import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.CustomerDAOImpl;
 
 public class DAOFactory {
@@ -12,9 +13,11 @@ public class DAOFactory {
         return daoFactory == null ? (daoFactory = new DAOFactory()) : daoFactory;
     }
 
+    @SuppressWarnings("unchecked")
     public <T extends SuperDAO> T getDAO(DAOTypes daoType) {
-        return switch (daoType){
-            case CUSTOMER -> (T) new CustomerDAOImpl();
+        return (T) switch (daoType){
+            case CUSTOMER -> new CustomerDAOImpl();
+            case BUFFALO -> new BuffaloDAOImpl();
         };
     }
 }
