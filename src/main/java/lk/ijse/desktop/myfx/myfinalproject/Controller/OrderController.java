@@ -311,25 +311,25 @@ public class OrderController implements Initializable {
 
     }
 
-    public void comProductionIdOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
-
-        String selectedItemId = comProductionId.getValue();
-        if (selectedItemId != null && !selectedItemId.isEmpty()) {
-            CurdProductionDto product = CurdProductionModel.findById(selectedItemId);
-            if (product != null) {
-                lblItemName.setText(String.valueOf(product.getPotsSize()));
-                lblItemQty.setText(String.valueOf(product.getQuantity()));
-
-            } else {
-                lblItemName.setText("");
-                lblItemQty.setText("");
-                txtUnitPrice.setText("");
-                new Alert(Alert.AlertType.WARNING, "Production item details not found.").show();
-            }
-        } else {
-            lblItemName.setText("");
-            lblItemQty.setText("");
-            txtUnitPrice.setText("");
-        }
-    }
+//    public void comProductionIdOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
+//
+//        String selectedItemId = comProductionId.getValue();
+//        if (selectedItemId != null && !selectedItemId.isEmpty()) {
+//            CurdProductionDto product = CurdProductionModel.findById(selectedItemId);
+//            if (product != null) {
+//                lblItemName.setText(String.valueOf(product.getPotsSize()));
+//                lblItemQty.setText(String.valueOf(product.getQuantity()));
+//
+//            } else {
+//                lblItemName.setText("");
+//                lblItemQty.setText("");
+//                txtUnitPrice.setText("");
+//                new Alert(Alert.AlertType.WARNING, "Production item details not found.").show();
+//            }
+//        } else {
+//            lblItemName.setText("");
+//            lblItemQty.setText("");
+//            txtUnitPrice.setText("");
+//        }
+//    }
 }

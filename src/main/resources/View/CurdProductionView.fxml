@@ -117,10 +117,10 @@
 
             <ButtonBar prefHeight="50.0" style="-fx-padding: 10 0 10 0;">
                 <buttons>
-                    <Button mnemonicParsing="false" onAction="#btnSaveOnAction" style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-padding: 8 20 8 20;" text="Save" />
-                    <Button mnemonicParsing="false" onAction="#btnUpdateOnAction" style="-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-padding: 8 20 8 20;" text="Update" />
-                    <Button mnemonicParsing="false" onAction="#btnClearOnAction" style="-fx-background-color: #ffc107; -fx-text-fill: #212529; -fx-font-weight: bold; -fx-background-radius: 5; -fx-padding: 8 20 8 20;" text="Clear" />
-                    <Button mnemonicParsing="false" onAction="#btnDeleteOnAction" style="-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-padding: 8 20 8 20;" text="Delete" />
+                    <Button fx:id="btnSave" mnemonicParsing="false" onAction="#btnSaveOnAction" style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-padding: 8 20 8 20;" text="Save" />
+                    <Button fx:id="btnUpdate" mnemonicParsing="false" onAction="#btnUpdateOnAction" style="-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-padding: 8 20 8 20;" text="Update" />
+                    <Button fx:id="btnClear" mnemonicParsing="false" onAction="#btnClearOnAction" style="-fx-background-color: #ffc107; -fx-text-fill: #212529; -fx-font-weight: bold; -fx-background-radius: 5; -fx-padding: 8 20 8 20;" text="Clear" />
+                    <Button fx:id="btnDelete" mnemonicParsing="false" onAction="#btnDeleteOnAction" style="-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5; -fx-padding: 8 20 8 20;" text="Delete" />
                 </buttons>
             </ButtonBar>
 

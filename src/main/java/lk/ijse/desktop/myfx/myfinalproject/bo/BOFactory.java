@@ -1,6 +1,7 @@
 package lk.ijse.desktop.myfx.myfinalproject.bo;
 
 import lk.ijse.desktop.myfx.myfinalproject.bo.custom.impl.BuffaloBOImpl;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.impl.CurdProductionBOImpl;
 import lk.ijse.desktop.myfx.myfinalproject.bo.custom.impl.CustomerBOImpl;
 import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.BuffaloDAOImpl;
 
@@ -17,6 +18,7 @@ public class BOFactory {
         return (T) switch (boTypes){
             case CUSTOMER -> new CustomerBOImpl();
             case BUFFALO -> new BuffaloBOImpl();
+            case CURD_PRODUCTION -> new CurdProductionBOImpl();
         };
     }
 }

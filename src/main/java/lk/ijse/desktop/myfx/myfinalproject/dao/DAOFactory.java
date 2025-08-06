@@ -2,6 +2,7 @@ package lk.ijse.desktop.myfx.myfinalproject.dao;
 
 import lk.ijse.desktop.myfx.myfinalproject.bo.custom.impl.CustomerBOImpl;
 import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.BuffaloDAOImpl;
+import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.CurdProductionDAOImpl;
 import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.CustomerDAOImpl;
 
 public class DAOFactory {
@@ -18,6 +19,7 @@ public class DAOFactory {
         return (T) switch (daoType){
             case CUSTOMER -> new CustomerDAOImpl();
             case BUFFALO -> new BuffaloDAOImpl();
+            case CURD_PRODUCTION -> new CurdProductionDAOImpl();
         };
     }
 }

@@ -2,6 +2,8 @@ package lk.ijse.desktop.myfx.myfinalproject.Dto;
 
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -10,14 +12,11 @@ import lombok.*;
 
 public class CurdProductionDto {
     private String productionId;
-    private String productionDate;
-    private String expiryDate;
+    private LocalDate productionDate;
+    private LocalDate expiryDate;
     private int quantity;
     private int potsSize;
     private String ingredients;
     private String storageId;
 
-    public CurdProductionDto(String id) {
-        this.productionId = id;
-    }
 }

@@ -63,21 +63,21 @@ public class CurdProductionModel {
         return list;
     }
 
-    public static CurdProductionDto findById(String selectedItemId) throws SQLException {
-        ResultSet rst = CrudUtil.execute("select * from Curd_Production where Production_ID = ?",selectedItemId);
-        if(rst.next()) {
-            return new CurdProductionDto(
-                    rst.getString(1),
-                    rst.getString(2),
-                    rst.getString(3),
-                    rst.getInt(4),
-                    rst.getInt(5),
-                    rst.getString(6),
-                    rst.getString(7)
-            );
-        }
-        return null;
-    }
+//    public static CurdProductionDto findById(String selectedItemId) throws SQLException {
+//        ResultSet rst = CrudUtil.execute("select * from Curd_Production where Production_ID = ?",selectedItemId);
+//        if(rst.next()) {
+//            return new CurdProductionDto(
+//                    rst.getString(1),
+//                    rst.getString(2),
+//                    rst.getString(3),
+//                    rst.getInt(4),
+//                    rst.getInt(5),
+//                    rst.getString(6),
+//                    rst.getString(7)
+//            );
+//        }
+//        return null;
+//    }
 
     public static boolean reduceQty(OrderDetailsDto orderDetailsDto) throws SQLException{
         return CrudUtil.execute(
@@ -101,23 +101,23 @@ public class CurdProductionModel {
         return prefix + "001";
     }
 
-    public ArrayList<CurdProductionDto> viewAllCurdProduction() throws ClassNotFoundException, SQLException{
-        ResultSet rs = CrudUtil.execute("SELECT * FROM Curd_Production");
-        ArrayList<CurdProductionDto> viewCurdProduction = new ArrayList<>();
-        while(rs.next()){
-            CurdProductionDto curdProductionDto = new CurdProductionDto(
-                    rs.getString("Production_ID"),
-                    rs.getString("Production_Date"),
-                    rs.getString("Expiry_Date"),
-                    rs.getInt("Quantity"),
-                    rs.getInt("Pots_Size"),
-                    rs.getString("Ingredients"),
-                    rs.getString("Storage_ID")
-            );
-            viewCurdProduction.add(curdProductionDto);
-        }
-        return viewCurdProduction;
-    }
+//    public ArrayList<CurdProductionDto> viewAllCurdProduction() throws ClassNotFoundException, SQLException{
+//        ResultSet rs = CrudUtil.execute("SELECT * FROM Curd_Production");
+//        ArrayList<CurdProductionDto> viewCurdProduction = new ArrayList<>();
+//        while(rs.next()){
+//            CurdProductionDto curdProductionDto = new CurdProductionDto(
+//                    rs.getString("Production_ID"),
+//                    rs.getString("Production_Date"),
+//                    rs.getString("Expiry_Date"),
+//                    rs.getInt("Quantity"),
+//                    rs.getInt("Pots_Size"),
+//                    rs.getString("Ingredients"),
+//                    rs.getString("Storage_ID")
+//            );
+//            viewCurdProduction.add(curdProductionDto);
+//        }
+//        return viewCurdProduction;
+//    }
     public static boolean saveCurdProduction(CurdProductionDto curdProductionDto) throws ClassNotFoundException, SQLException{
         return CrudUtil.execute(
                 "insert into Curd_Production values (?,?,?,?,?,?,?)",
