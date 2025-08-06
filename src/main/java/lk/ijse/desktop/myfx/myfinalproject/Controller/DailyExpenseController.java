@@ -1,5 +1,6 @@
 package lk.ijse.desktop.myfx.myfinalproject.Controller;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -13,10 +14,16 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.DailyExpenseDto;
 import lk.ijse.desktop.myfx.myfinalproject.Model.DailyExpenseModel;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOFactory;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOTypes;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.DailyExpenseBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.DuplicateException;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.NotFoundException;
 
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
@@ -62,103 +69,39 @@ public class DailyExpenseController implements Initializable {
     @FXML
     private Label lblId;
 
+    @FXML
+    private Button btnClear;
+
+    @FXML
+    private Button btnDelete;
+
+    @FXML
+    private Button btnSave;
+
+    @FXML
+    private Button btnUpdate;
+
     private final String amountPattern = "^\\d+(\\.\\d{1,2})?$";
     private final String descriptionPattern = "^[A-Za-z0-9 ,.'\\-]+$";
     private final String datePattern = "^\\d{4}-\\d{2}-\\d{2}$";
 
-    @FXML
-    void btnClearOnAction(ActionEvent event) throws SQLException {
-        clearFields();
-    }
+    private final DailyExpenseBO dailyExpenseBO = BOFactory.getInstance().getBO(BOTypes.DAILY_EXPENSE);
 
-    @FXML
-    void btnDeleteOnAction(ActionEvent event) {
-        String id = lblId.getText();
-
-        if (id == null || id.isEmpty() || id.equals("Auto Generated")) {
-            new Alert(Alert.AlertType.WARNING, "Please select a daily expense to delete from the table.").show();
-            return;
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        setupTableColumns();
+        setupFieldListeners();
+        try {
+            loadNextId();
+            loadExpenseCategories();
+            loadTable();
+            updateButtonStates();
+            clearFields();
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Initialization Error: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to initialize DailyExpenseController", e);
         }
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirmation Dialog");
-        alert.setHeaderText("Delete Daily Expense");
-        alert.setContentText("Are you sure you want to delete this daily expense record?");
-
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                boolean isDelete = new DailyExpenseModel().deleteDailyExpense(new DailyExpenseDto(id, null, null, 0.0, false));
-                if (isDelete) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Daily expense record deleted successfully!").show();
-                } else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to delete daily expense record.").show();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage()).show();
-            }
-        }
-    }
-
-    private void loadNextId () throws SQLException {
-        DailyExpenseModel dailyExpenseModel = new DailyExpenseModel();
-        String id = dailyExpenseModel.getNextId();
-        lblId.setText(id);
-    }
-
-    @FXML
-    public void btnSaveOnAction(ActionEvent event) {
-
-        boolean isValidAmount = txtAmount.getText().matches(amountPattern);
-        boolean isValidDescription = txtDescription.getText().matches(descriptionPattern);
-        boolean isValidDate = txtDate.getText().matches(datePattern);
-        boolean isExpenseCategorySelected = comExpense.getValue() != null;
-
-        if (isValidAmount && isValidDescription && isValidDate && isExpenseCategorySelected) {
-            try {
-                double amount = Double.parseDouble(txtAmount.getText());
-                boolean expense = comExpense.getValue();
-
-                DailyExpenseDto dailyExpenseDto = new DailyExpenseDto(
-                        lblId.getText(),
-                        txtDate.getText(),
-                        txtDescription.getText(),
-                        amount,
-                        expense
-                );
-
-                DailyExpenseModel dailyExpenseModel = new DailyExpenseModel();
-                boolean isSave = dailyExpenseModel.SavedDailyExpense(dailyExpenseDto);
-                if (isSave) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Daily expense has been saved successfully").show();
-                }else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to save daily expense").show();
-                }
-            }catch (NumberFormatException e){
-                new Alert(Alert.AlertType.ERROR, "Invalid number format for Amount.").show();
-            } catch (Exception e){
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "Failed to add daily expense due to a database error.").show();
-            }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Amount: e.g., 1500.00, Date: YYYY-MM-DD).").show();
-            applyValidationStyles();
-        }
-    }
-
-    private void clearFields() throws SQLException {
-        lblId.setText("");
-        txtDate.setText("");
-        txtDescription.setText("");
-        txtAmount.setText("");
-        comExpense.getSelectionModel().clearSelection();
-        resetValidationStyles();
-
-        loadNextId();
-        loadTable();
     }
 
     private void setupTableColumns(){
@@ -171,85 +114,225 @@ public class DailyExpenseController implements Initializable {
 
     private void loadTable(){
         try {
-            DailyExpenseModel dailyExpenseModel = new DailyExpenseModel();
-            ArrayList<DailyExpenseDto> dailyExpenseDtos = dailyExpenseModel.viewAllDailyExpense();
-            if (dailyExpenseDtos != null) {
-                ObservableList<DailyExpenseDto> observableList = FXCollections.observableArrayList(dailyExpenseDtos);
-                tblExpense.setItems(observableList);
-            }else {
-                tblExpense.setItems(FXCollections.emptyObservableList());
-            }
-        }catch (Exception e){
+            List<DailyExpenseDto> dailyExpenseDtos = dailyExpenseBO.getAllDailyExpenses();
+            tblExpense.setItems(FXCollections.observableArrayList(dailyExpenseDtos));
+        }catch (SQLException e){
+            showAlert(Alert.AlertType.ERROR, "Error loading daily expense data into table: " + e.getMessage());
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Error loading daily expense data into table.").show();
         }
     }
 
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-        try {
-            loadNextId();
-            loadExpenseCategories();
-            setupTableColumns();
-            clearFields();
-        } catch (SQLException e) {
-            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
+    private void setupFieldListeners() {
+        txtAmount.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtDescription.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comExpense.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        tblExpense.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> updateButtonStates());
+    }
+
+    private void updateButtonStates() {
+        if (btnSave == null || btnUpdate == null || btnDelete == null || btnClear == null) {
+            return;
         }
+
+        boolean isAnyFieldEmpty = txtAmount.getText().isEmpty() ||
+                txtDescription.getText().isEmpty() ||
+                txtDate.getText().isEmpty() ||
+                comExpense.getValue() == null;
+
+        boolean isValid = isValidInputs(false);
+
+        DailyExpenseDto selectedItem = tblExpense.getSelectionModel().getSelectedItem();
+
+        if (selectedItem == null) {
+            btnSave.setDisable(isAnyFieldEmpty || !isValid);
+            btnUpdate.setDisable(true);
+            btnDelete.setDisable(true);
+        } else {
+            btnSave.setDisable(true);
+            btnUpdate.setDisable(isAnyFieldEmpty || !isValid);
+            btnDelete.setDisable(false);
+        }
+        btnClear.setDisable(false);
+    }
+
+    private void loadNextId () throws SQLException {
+        String id = dailyExpenseBO.getNextDailyExpenseId();
+        lblId.setText(id);
+    }
+
+    private void clearFields() throws SQLException {
+        lblId.setText("");
+        txtDate.clear();
+        txtDescription.clear();
+        txtAmount.clear();
+        comExpense.getSelectionModel().clearSelection();
+        resetValidationStyles();
+
+        loadNextId();
+        loadTable();
+        tblExpense.getSelectionModel().clearSelection();
+        updateButtonStates();
     }
 
     private void loadExpenseCategories() throws SQLException {
-        ObservableList<Boolean> expenseCategories = FXCollections.observableArrayList(true, false);
-        comExpense.setItems(expenseCategories);
+        List<Boolean> expenseCategories = dailyExpenseBO.getAllExpenseCategories();
+        ObservableList<Boolean> data = FXCollections.observableArrayList(expenseCategories);
+        if (data.isEmpty()) {
+            data.addAll(true, false);
+        }
+        comExpense.setItems(data);
     }
 
-    @FXML
-    void btnUpdateOnAction(ActionEvent event) {
-
+    private boolean isValidInputs(boolean showDialog) {
         boolean isValidAmount = txtAmount.getText().matches(amountPattern);
         boolean isValidDescription = txtDescription.getText().matches(descriptionPattern);
         boolean isValidDate = txtDate.getText().matches(datePattern);
         boolean isExpenseCategorySelected = comExpense.getValue() != null;
 
-        if (isValidAmount && isValidDescription && isValidDate && isExpenseCategorySelected) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmation Dialog");
-            alert.setHeaderText("Update Daily Expense");
-            alert.setContentText("Are you sure you want to update this daily expense record?");
-
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                try {
-                    double amount = Double.parseDouble(txtAmount.getText());
-                    boolean expense = comExpense.getValue();
-
-                    DailyExpenseDto dailyExpenseDto = new DailyExpenseDto(
-                            lblId.getText(),
-                            txtDate.getText(),
-                            txtDescription.getText(),
-                            amount,
-                            expense
-                    );
-
-                    boolean isUpdated = DailyExpenseModel.updateDailyExpense(dailyExpenseDto);
-                    if (isUpdated) {
-                        clearFields();
-                        new Alert(Alert.AlertType.INFORMATION, "Daily expense updated successfully!").show();
-                    } else {
-                        new Alert(Alert.AlertType.ERROR, "Failed to update daily expense.").show();
-                    }
-                } catch (NumberFormatException e) {
-                    new Alert(Alert.AlertType.ERROR, "Invalid number format for Amount.").show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    new Alert(Alert.AlertType.ERROR, "An error occurred during update: " + e.getMessage()).show();
-                }
+        if (showDialog) {
+            if (!isValidAmount) {
+                showAlert(Alert.AlertType.WARNING, "Amount must be a valid number (e.g., 1500.00).");
+                return false;
             }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Amount: e.g., 1500.00, Date: YYYY-MM-DD).").show();
-            applyValidationStyles();
+            if (!isValidDescription) {
+                showAlert(Alert.AlertType.WARNING, "Description contains invalid characters. Use letters, numbers, spaces, commas, periods, apostrophes, and hyphens.");
+                return false;
+            }
+            if (!isValidDate) {
+                showAlert(Alert.AlertType.WARNING, "Date must be in YYYY-MM-DD format.");
+                return false;
+            }
+            if (!isExpenseCategorySelected) {
+                showAlert(Alert.AlertType.WARNING, "Please select an Expense Category (True/False).");
+                return false;
+            }
+        }
+        return isValidAmount && isValidDescription && isValidDate && isExpenseCategorySelected;
+    }
+
+    private void showAlert(Alert.AlertType alertType, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(alertType);
+            alert.setTitle(alertType.name().replace("_", " "));
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        });
+    }
+
+    @FXML
+    void btnClearOnAction(ActionEvent event) throws SQLException {
+        clearFields();
+    }
+
+    @FXML
+    void btnDeleteOnAction(ActionEvent event) {
+        String id = lblId.getText();
+
+        if (id == null || id.isEmpty() || lblId.getText().equals("E001") || tblExpense.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "Please select a daily expense to delete from the table.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Delete Daily Expense");
+        alert.setContentText("Are you sure you want to delete this daily expense record?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                boolean isDeleted = dailyExpenseBO.deleteDailyExpense(id);
+                if (isDeleted) {
+                    showAlert(Alert.AlertType.INFORMATION, "Daily expense record deleted successfully!");
+                    clearFields();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Failed to delete daily expense record.");
+                }
+            } catch (NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, e.getMessage());
+            } catch (SQLException e) {
+                showAlert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
+    @FXML
+    public void btnSaveOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
+            applyValidationStyles();
+            return;
+        }
+
+        try {
+            double amount = Double.parseDouble(txtAmount.getText());
+            boolean expense = comExpense.getValue();
+
+            DailyExpenseDto dailyExpenseDto = new DailyExpenseDto(
+                    lblId.getText(),
+                    txtDate.getText(),
+                    txtDescription.getText(),
+                    amount,
+                    expense
+            );
+
+            dailyExpenseBO.saveDailyExpense(dailyExpenseDto);
+            showAlert(Alert.AlertType.INFORMATION, "Daily expense has been saved successfully!");
+            clearFields();
+        } catch (NumberFormatException e){
+            showAlert(Alert.AlertType.ERROR, "Invalid number format for Amount.");
+        } catch (SQLException | DuplicateException e){
+            showAlert(Alert.AlertType.ERROR, "Failed to save daily expense: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    void btnUpdateOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
+            applyValidationStyles();
+            return;
+        }
+
+        if (tblExpense.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "Please select a daily expense record from the table to update.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Update Daily Expense");
+        alert.setContentText("Are you sure you want to update this daily expense record?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                double amount = Double.parseDouble(txtAmount.getText());
+                boolean expense = comExpense.getValue();
+
+                DailyExpenseDto dailyExpenseDto = new DailyExpenseDto(
+                        lblId.getText(),
+                        txtDate.getText(),
+                        txtDescription.getText(),
+                        amount,
+                        expense
+                );
+
+                dailyExpenseBO.updateDailyExpense(dailyExpenseDto);
+                showAlert(Alert.AlertType.INFORMATION, "Daily expense updated successfully!");
+                clearFields();
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.ERROR, "Invalid number format for Amount.");
+            } catch (SQLException | NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, "An error occurred during update: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @FXML
     public void tableOnClick(MouseEvent mouseEvent) {
         DailyExpenseDto dailyExpenseDto = tblExpense.getSelectionModel().getSelectedItem();
         if (dailyExpenseDto != null) {
@@ -259,6 +342,7 @@ public class DailyExpenseController implements Initializable {
             txtAmount.setText(String.valueOf(dailyExpenseDto.getAmount()));
             comExpense.setValue(dailyExpenseDto.isDailyExpense());
             resetValidationStyles();
+            updateButtonStates();
         }
     }
 
@@ -276,7 +360,7 @@ public class DailyExpenseController implements Initializable {
             ancDailyExpense.getChildren().add(anchorPane);
         }catch (Exception e){
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Something went wrong: " + e.getMessage(), ButtonType.OK).show();
+            showAlert(Alert.AlertType.ERROR, "Something went wrong: " + e.getMessage());
         }
     }
 
@@ -291,36 +375,37 @@ public class DailyExpenseController implements Initializable {
         } else {
             comExpense.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtDescriptionChange(KeyEvent keyEvent) {
         String description = txtDescription.getText();
-        boolean isValid = description.matches(descriptionPattern);
-        if (isValid) {
+        if (description.matches(descriptionPattern)) {
             txtDescription.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtDescription.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtAmountChange(KeyEvent keyEvent) {
         String amount = txtAmount.getText();
-        boolean isValid = amount.matches(amountPattern);
-        if (isValid) {
+        if (amount.matches(amountPattern)) {
             txtAmount.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtAmount.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtDateChange(KeyEvent keyEvent) {
         String date = txtDate.getText();
-        boolean isValid = date.matches(datePattern);
-        if (isValid) {
+        if (date.matches(datePattern)) {
             txtDate.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtDate.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     private void applyValidationStyles() {

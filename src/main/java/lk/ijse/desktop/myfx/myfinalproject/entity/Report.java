@@ -7,10 +7,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-public class DailyIncome {
-    private String id;
-    private String customerName;
+public class Report {
+    private String reportId;
     private String date;
-    private String description;
-    private double amount;
+    private String userId;
+    private String reportType;
+    private String generateBy;
 }

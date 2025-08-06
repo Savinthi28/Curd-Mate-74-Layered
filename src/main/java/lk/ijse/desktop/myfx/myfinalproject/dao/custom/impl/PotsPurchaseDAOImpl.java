@@ -1,4 +1,4 @@
 package lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl;
 
-public class QulityCheckDAOImpl {
+public class PotsPurchaseDAOImpl {
 }

@@ -1,9 +1,6 @@
 package lk.ijse.desktop.myfx.myfinalproject.dao;
 
-import lk.ijse.desktop.myfx.myfinalproject.bo.custom.impl.CustomerBOImpl;
-import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.BuffaloDAOImpl;
-import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.CurdProductionDAOImpl;
-import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.CustomerDAOImpl;
+import lk.ijse.desktop.myfx.myfinalproject.dao.custom.impl.*;
 
 public class DAOFactory {
     private static DAOFactory daoFactory;
@@ -20,6 +17,19 @@ public class DAOFactory {
             case CUSTOMER -> new CustomerDAOImpl();
             case BUFFALO -> new BuffaloDAOImpl();
             case CURD_PRODUCTION -> new CurdProductionDAOImpl();
+            case DAILY_INCOME -> new DailyIncomeDAOImpl();
+            case DAILY_EXPENSE -> new DailyExpenseDAOImpl();
+            case MILK_COLLECTION -> new MilkCollectionDAOImpl();
+            case MILK_STORAGE -> new MilkStorageDAOImpl();
+            case PAYMENT -> new PaymentDAOImpl();
+            case POTS_INVENTORY -> new PotsInventoryDAOImpl();
+            case POTS_PURCHASE -> new PotsPurchaseDAOImpl();
+            case QUALITY_CHECK -> new QualityCheckDAOImpl();
+            case RAW_MATERIAL_PURCHASE -> new RawMaterialPurchaseDAOImpl();
+            case REPORT -> new ReportDAOImpl();
+            case STOCK -> new StockDAOImpl();
+            case SUPPLIER -> new SupplierDAOImpl();
+            case USER -> new UserDAOImpl();
         };
     }
 }
