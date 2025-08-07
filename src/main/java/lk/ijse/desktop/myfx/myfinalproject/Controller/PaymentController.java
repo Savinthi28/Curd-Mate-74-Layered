@@ -1,5 +1,6 @@
 package lk.ijse.desktop.myfx.myfinalproject.Controller;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -11,10 +12,16 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.PaymentDto;
 import lk.ijse.desktop.myfx.myfinalproject.Model.PaymentModel;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOFactory;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOTypes;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.PaymentBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.DuplicateException;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.NotFoundException;
 
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
@@ -59,103 +66,33 @@ public class PaymentController implements Initializable {
     @FXML
     private Label lblId;
 
+    @FXML private Button btnClear;
+    @FXML private Button btnDelete;
+    @FXML private Button btnSave;
+    @FXML private Button btnUpdate;
+
     private final String datePattern = "^\\d{4}-\\d{2}-\\d{2}$";
     private final String amountPattern = "^\\d+(\\.\\d{1,2})?$";
 
-    @FXML
-    void btnClearOnAction(ActionEvent event) throws SQLException {
-        clearFields();
-    }
+    private final PaymentBO paymentBO = BOFactory.getInstance().getBO(BOTypes.PAYMENT);
 
-    @FXML
-    void btnDeleteOnAction(ActionEvent event) {
-        String id = lblId.getText();
-
-        if (id == null || id.isEmpty() || id.equals("Auto Generated")) {
-            new Alert(Alert.AlertType.WARNING, "Please select a payment record to delete from the table.").show();
-            return;
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        setupTableColumns();
+        setupFieldListeners();
+        try {
+            loadNextId();
+            loadOrderId();
+            loadCustomerId();
+            loadPaymentMethod();
+            loadTable();
+            updateButtonStates();
+            clearFields();
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Initialization Error: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
         }
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirmation Dialog");
-        alert.setHeaderText("Delete Payment");
-        alert.setContentText("Are you sure you want to delete this payment record?");
-
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                boolean isDeleted = new PaymentModel().deletePayment(new PaymentDto(id, null, null, null, null, 0.0));
-                if (isDeleted) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Payment record deleted successfully!").show();
-                } else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to delete payment record.").show();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage()).show();
-            }
-        }
-    }
-
-    private void loadNextId() throws SQLException {
-        PaymentModel paymentModel = new PaymentModel();
-        String id = paymentModel.getNextId();
-        lblId.setText(id);
-    }
-
-    @FXML
-    void btnSaveOnAction(ActionEvent event) {
-
-        boolean isValidDate = txtDate.getText().matches(datePattern);
-        boolean isValidAmount = txtAmount.getText().matches(amountPattern);
-        boolean isOrderIdSelected = comOrderId.getValue() != null && !comOrderId.getValue().isEmpty();
-        boolean isCustomerIdSelected = comCustomerId.getValue() != null && !comCustomerId.getValue().isEmpty();
-        boolean isPaymentMethodSelected = comPaymentMethod.getValue() != null && !comPaymentMethod.getValue().isEmpty();
-
-        if (isValidDate && isValidAmount && isOrderIdSelected && isCustomerIdSelected && isPaymentMethodSelected) {
-            try {
-                double amount = Double.parseDouble(txtAmount.getText());
-                PaymentDto paymentDto = new PaymentDto(
-                        lblId.getText(),
-                        comOrderId.getValue(),
-                        comCustomerId.getValue(),
-                        txtDate.getText(),
-                        comPaymentMethod.getValue(),
-                        amount
-                );
-
-                PaymentModel paymentModel = new PaymentModel();
-                boolean isSaved = paymentModel.savePayment(paymentDto);
-                if (isSaved) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Payment has been saved successfully!").show();
-                } else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to save payment.").show();
-                }
-            } catch (NumberFormatException e) {
-                new Alert(Alert.AlertType.ERROR, "Invalid number format for Payment Amount.").show();
-            } catch (Exception e) {
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "Failed to save payment due to a database error: " + e.getMessage()).show();
-            }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Date: YYYY-MM-DD, Amount: e.g., 5000.00).").show();
-            applyValidationStyles();
-        }
-    }
-
-    private void clearFields() throws SQLException {
-        lblId.setText("");
-        comOrderId.getSelectionModel().clearSelection();
-        comCustomerId.getSelectionModel().clearSelection();
-        txtDate.setText("");
-        comPaymentMethod.getSelectionModel().clearSelection();
-        txtAmount.setText("");
-        resetValidationStyles();
-
-        loadNextId();
-        loadTable();
     }
 
     private void setupTableColumns() {
@@ -167,99 +104,238 @@ public class PaymentController implements Initializable {
         colAmount.setCellValueFactory(new PropertyValueFactory<>("amount"));
     }
 
-    private void loadTable() {
-        try {
-            PaymentModel paymentModel = new PaymentModel();
-            ArrayList<PaymentDto> paymentDtos = paymentModel.viewAllPayment();
-            if (paymentDtos != null) {
-                ObservableList<PaymentDto> payments = FXCollections.observableArrayList(paymentDtos);
-                tblPayment.setItems(payments);
-            } else {
-                tblPayment.setItems(FXCollections.emptyObservableList());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Error loading payment data into table.").show();
-        }
-    }
-
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-        try {
-            loadNextId();
-            loadOrderId();
-            loadCustomerId();
-            loadPaymentMethod();
-            setupTableColumns();
-            clearFields();
-        } catch (SQLException e) {
-            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
-        }
+    private void loadOrderId() throws SQLException {
+        List<String> orderIds = paymentBO.getAllOrderIds();
+        ObservableList<String> orders = FXCollections.observableArrayList(orderIds);
+        comOrderId.setItems(orders);
     }
 
     private void loadCustomerId() throws SQLException {
-        ArrayList<String> customerIds = PaymentModel.getAllCustomerId();
+        List<String> customerIds = paymentBO.getAllCustomerIds();
         ObservableList<String> customers = FXCollections.observableArrayList(customerIds);
         comCustomerId.setItems(customers);
     }
 
-    private void loadOrderId() throws SQLException {
-        ArrayList<String> orderId = PaymentModel.getAllOrderId();
-        ObservableList<String> orders = FXCollections.observableArrayList(orderId);
-        comOrderId.setItems(orders);
-    }
-
     private void loadPaymentMethod() throws SQLException {
-        ArrayList<String> paymentMethods = PaymentModel.getAllPaymentMethod();
+        List<String> paymentMethods = paymentBO.getAllPaymentMethods();
         ObservableList<String> payments = FXCollections.observableArrayList(paymentMethods);
         comPaymentMethod.setItems(payments);
     }
 
-    @FXML
-    public void btnUpdateOnAction(ActionEvent event) {
+    private void loadNextId() throws SQLException {
+        String id = paymentBO.getNextPaymentId();
+        lblId.setText(id);
+    }
 
+    private void loadTable() {
+        try {
+            List<PaymentDto> paymentDtos = paymentBO.getAllPayments();
+            tblPayment.setItems(FXCollections.observableArrayList(paymentDtos));
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error loading payment data into table: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void setupFieldListeners() {
+        txtDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtAmount.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comOrderId.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comCustomerId.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comPaymentMethod.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        tblPayment.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> updateButtonStates());
+    }
+
+    private void updateButtonStates() {
+        if (btnSave == null || btnUpdate == null || btnDelete == null || btnClear == null) {
+            return;
+        }
+
+        boolean isAnyFieldEmpty = txtDate.getText().isEmpty() ||
+                txtAmount.getText().isEmpty() ||
+                comOrderId.getValue() == null || comOrderId.getValue().isEmpty() ||
+                comCustomerId.getValue() == null || comCustomerId.getValue().isEmpty() ||
+                comPaymentMethod.getValue() == null || comPaymentMethod.getValue().isEmpty();
+
+        boolean isValid = isValidInputs(false);
+
+        PaymentDto selectedItem = tblPayment.getSelectionModel().getSelectedItem();
+
+        if (selectedItem == null) {
+            btnSave.setDisable(isAnyFieldEmpty || !isValid);
+            btnUpdate.setDisable(true);
+            btnDelete.setDisable(true);
+        } else {
+            btnSave.setDisable(true);
+            btnUpdate.setDisable(isAnyFieldEmpty || !isValid);
+            btnDelete.setDisable(false);
+        }
+        btnClear.setDisable(false);
+    }
+
+    private void clearFields() throws SQLException {
+        lblId.setText("");
+        comOrderId.getSelectionModel().clearSelection();
+        comCustomerId.getSelectionModel().clearSelection();
+        txtDate.clear();
+        comPaymentMethod.getSelectionModel().clearSelection();
+        txtAmount.clear();
+        resetValidationStyles();
+
+        loadNextId();
+        loadTable();
+        tblPayment.getSelectionModel().clearSelection();
+        updateButtonStates();
+    }
+
+    private boolean isValidInputs(boolean showDialog) {
         boolean isValidDate = txtDate.getText().matches(datePattern);
         boolean isValidAmount = txtAmount.getText().matches(amountPattern);
         boolean isOrderIdSelected = comOrderId.getValue() != null && !comOrderId.getValue().isEmpty();
         boolean isCustomerIdSelected = comCustomerId.getValue() != null && !comCustomerId.getValue().isEmpty();
         boolean isPaymentMethodSelected = comPaymentMethod.getValue() != null && !comPaymentMethod.getValue().isEmpty();
 
-        if (isValidDate && isValidAmount && isOrderIdSelected && isCustomerIdSelected && isPaymentMethodSelected) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmation Dialog");
-            alert.setHeaderText("Update Payment");
-            alert.setContentText("Are you sure you want to update this payment record?");
-
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                try {
-                    double amount = Double.parseDouble(txtAmount.getText());
-                    PaymentDto paymentDto = new PaymentDto(
-                            lblId.getText(),
-                            comOrderId.getValue(),
-                            comCustomerId.getValue(),
-                            txtDate.getText(),
-                            comPaymentMethod.getValue(),
-                            amount
-                    );
-
-                    boolean isUpdated = PaymentModel.updatePayment(paymentDto);
-                    if (isUpdated) {
-                        clearFields();
-                        new Alert(Alert.AlertType.INFORMATION, "Payment has been updated successfully!").show();
-                    } else {
-                        new Alert(Alert.AlertType.ERROR, "Failed to update payment.").show();
-                    }
-                } catch (NumberFormatException e) {
-                    new Alert(Alert.AlertType.ERROR, "Invalid number format for Payment Amount.").show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    new Alert(Alert.AlertType.ERROR, "An error occurred during update: " + e.getMessage()).show();
-                }
+        if (showDialog) {
+            if (!isValidDate) {
+                showAlert(Alert.AlertType.WARNING, "Date must be in YYYY-MM-DD format (e.g., 2025-07-31).");
+                return false;
             }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Date: YYYY-MM-DD, Amount: e.g., 5000.00).").show();
+            if (!isValidAmount) {
+                showAlert(Alert.AlertType.WARNING, "Amount must be a valid number (e.g., 5000.00 or 123).");
+                return false;
+            }
+            if (!isOrderIdSelected) {
+                showAlert(Alert.AlertType.WARNING, "Please select an Order ID.");
+                return false;
+            }
+            if (!isCustomerIdSelected) {
+                showAlert(Alert.AlertType.WARNING, "Please select a Customer ID.");
+                return false;
+            }
+            if (!isPaymentMethodSelected) {
+                showAlert(Alert.AlertType.WARNING, "Please select a Payment Method.");
+                return false;
+            }
+        }
+        return isValidDate && isValidAmount && isOrderIdSelected && isCustomerIdSelected && isPaymentMethodSelected;
+    }
+
+    private void showAlert(Alert.AlertType alertType, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(alertType);
+            alert.setTitle(alertType.name().replace("_", " "));
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        });
+    }
+
+    @FXML
+    void btnClearOnAction(ActionEvent event) throws SQLException {
+        clearFields();
+    }
+
+    @FXML
+    void btnDeleteOnAction(ActionEvent event) {
+        String id = lblId.getText();
+
+        if (id == null || id.isEmpty() || lblId.getText().equals("P001") || tblPayment.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "Please select a payment record to delete from the table.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Delete Payment");
+        alert.setContentText("Are you sure you want to delete this payment record?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                boolean isDeleted = paymentBO.deletePayment(id);
+                if (isDeleted) {
+                    showAlert(Alert.AlertType.INFORMATION, "Payment record deleted successfully!");
+                    clearFields();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Failed to delete payment record.");
+                }
+            } catch (NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, e.getMessage());
+            } catch (SQLException e) {
+                showAlert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @FXML
+    void btnSaveOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
             applyValidationStyles();
+            return;
+        }
+
+        try {
+            double amount = Double.parseDouble(txtAmount.getText());
+            PaymentDto paymentDto = new PaymentDto(
+                    lblId.getText(),
+                    comOrderId.getValue(),
+                    comCustomerId.getValue(),
+                    txtDate.getText(),
+                    comPaymentMethod.getValue(),
+                    amount
+            );
+
+            paymentBO.savePayment(paymentDto);
+            showAlert(Alert.AlertType.INFORMATION, "Payment has been saved successfully!");
+            clearFields();
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.ERROR, "Invalid number format for Payment Amount.");
+        } catch (SQLException | DuplicateException e) {
+            showAlert(Alert.AlertType.ERROR, "Failed to save payment: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    public void btnUpdateOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
+            applyValidationStyles();
+            return;
+        }
+
+        if (tblPayment.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "Please select a payment record from the table to update.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Update Payment");
+        alert.setContentText("Are you sure you want to update this payment record?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                double amount = Double.parseDouble(txtAmount.getText());
+                PaymentDto paymentDto = new PaymentDto(
+                        lblId.getText(),
+                        comOrderId.getValue(),
+                        comCustomerId.getValue(),
+                        txtDate.getText(),
+                        comPaymentMethod.getValue(),
+                        amount
+                );
+
+                paymentBO.updatePayment(paymentDto);
+                showAlert(Alert.AlertType.INFORMATION, "Payment has been updated successfully!");
+                clearFields();
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.ERROR, "Invalid number format for Payment Amount.");
+            } catch (SQLException | NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, "An error occurred during update: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
@@ -273,6 +349,7 @@ public class PaymentController implements Initializable {
             comPaymentMethod.setValue(paymentDto.getPaymentMethod());
             txtAmount.setText(String.valueOf(paymentDto.getAmount()));
             resetValidationStyles();
+            updateButtonStates();
         }
     }
 
@@ -282,6 +359,7 @@ public class PaymentController implements Initializable {
         } else {
             comOrderId.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void comCustomerIdOnAction(ActionEvent actionEvent) {
@@ -290,6 +368,7 @@ public class PaymentController implements Initializable {
         } else {
             comCustomerId.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void comPaymentMethodOnAction(ActionEvent actionEvent) {
@@ -298,26 +377,27 @@ public class PaymentController implements Initializable {
         } else {
             comPaymentMethod.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtAmountChange(KeyEvent keyEvent) {
         String amount = txtAmount.getText();
-        boolean isValid = amount.matches(amountPattern);
-        if (isValid) {
+        if (amount.matches(amountPattern)) {
             txtAmount.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtAmount.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtDateChange(KeyEvent keyEvent) {
         String date = txtDate.getText();
-        boolean isValid = date.matches(datePattern);
-        if (isValid) {
+        if (date.matches(datePattern)) {
             txtDate.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtDate.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     private void applyValidationStyles() {
