@@ -1,5 +1,6 @@
 package lk.ijse.desktop.myfx.myfinalproject.Controller;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -13,40 +14,27 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.MilkCollectionDto;
 import lk.ijse.desktop.myfx.myfinalproject.Model.MilkCollectionModel;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOFactory;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOTypes;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.MilkCollectionBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.DuplicateException;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.NotFoundException;
 
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class MilkCollectionController implements Initializable {
 
     public AnchorPane getAncMilkCollection() {
-        return null;
-    }
-
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-        try {
-            loadNextId();
-            loadMilkCollectionBuffaloId();
-            setupTableColumns();
-            clearFields();
-        } catch (SQLException e) {
-            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
-        }
-    }
-
-    private void loadMilkCollectionBuffaloId() throws SQLException {
-        ArrayList<String> milkCollectionBuffaloIds = MilkCollectionModel.getAllMilkCollectionBuffaloId();
-        ObservableList<String> observableList = FXCollections.observableArrayList(milkCollectionBuffaloIds);
-        comMilkCollection.setItems(observableList);
+        return ancMilkCollection;
     }
 
     @FXML
     private AnchorPane ancMilkCollection;
-    private String path;
 
     @FXML
     private TableColumn<MilkCollectionDto, String> colBuffaloId;
@@ -75,8 +63,138 @@ public class MilkCollectionController implements Initializable {
     @FXML
     private TextField txtQuantity;
 
+    @FXML private Button btnClear;
+    @FXML private Button btnDelete;
+    @FXML private Button btnSave;
+    @FXML private Button btnUpdate;
+
+
     private final String datePattern = "^\\d{4}-\\d{2}-\\d{2}$";
     private final String quantityPattern = "^\\d+(\\.\\d{1,2})?$";
+
+    private final MilkCollectionBO milkCollectionBO = BOFactory.getInstance().getBO(BOTypes.MILK_COLLECTION);
+
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        setupTableColumns();
+        setupFieldListeners();
+        try {
+            loadNextId();
+            loadMilkCollectionBuffaloId();
+            loadTable();
+            updateButtonStates();
+            clearFields();
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Initialization Error: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
+        }
+    }
+
+    private void setupTableColumns(){
+        colId.setCellValueFactory(new PropertyValueFactory<>("id"));
+        colDate.setCellValueFactory(new PropertyValueFactory<>("date"));
+        colQuantity.setCellValueFactory(new PropertyValueFactory<>("quantity"));
+        colBuffaloId.setCellValueFactory(new PropertyValueFactory<>("buffaloId"));
+    }
+
+    private void loadMilkCollectionBuffaloId() throws SQLException {
+        List<String> buffaloIds = milkCollectionBO.getAllBuffaloIds();
+        ObservableList<String> observableList = FXCollections.observableArrayList(buffaloIds);
+        comMilkCollection.setItems(observableList);
+    }
+
+    private void loadTable() {
+        try {
+            List<MilkCollectionDto> milkCollectionDtos = milkCollectionBO.getAllMilkCollections();
+            tblMilkCollection.setItems(FXCollections.observableArrayList(milkCollectionDtos));
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error loading milk collection data into table: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void setupFieldListeners() {
+        txtDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtQuantity.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comMilkCollection.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        tblMilkCollection.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> updateButtonStates());
+    }
+
+    private void updateButtonStates() {
+        if (btnSave == null || btnUpdate == null || btnDelete == null || btnClear == null) {
+            return;
+        }
+
+        boolean isAnyFieldEmpty = txtDate.getText().isEmpty() ||
+                txtQuantity.getText().isEmpty() ||
+                comMilkCollection.getValue() == null || comMilkCollection.getValue().isEmpty();
+
+        boolean isValid = isValidInputs(false);
+
+        MilkCollectionDto selectedItem = tblMilkCollection.getSelectionModel().getSelectedItem();
+
+        if (selectedItem == null) {
+            btnSave.setDisable(isAnyFieldEmpty || !isValid);
+            btnUpdate.setDisable(true);
+            btnDelete.setDisable(true);
+        } else {
+            btnSave.setDisable(true);
+            btnUpdate.setDisable(isAnyFieldEmpty || !isValid);
+            btnDelete.setDisable(false);
+        }
+        btnClear.setDisable(false);
+    }
+
+    private void loadNextId () throws SQLException {
+        String nextId = milkCollectionBO.getNextMilkCollectionId();
+        lblId.setText(nextId);
+    }
+
+    private void clearFields() throws SQLException {
+        lblId.setText("");
+        txtDate.clear();
+        txtQuantity.clear();
+        comMilkCollection.getSelectionModel().clearSelection();
+        resetValidationStyles();
+
+        loadNextId();
+        loadTable();
+        tblMilkCollection.getSelectionModel().clearSelection();
+        updateButtonStates();
+    }
+
+    private boolean isValidInputs(boolean showDialog) {
+        boolean isValidDate = txtDate.getText().matches(datePattern);
+        boolean isValidQuantity = txtQuantity.getText().matches(quantityPattern);
+        boolean isBuffaloIdSelected = comMilkCollection.getValue() != null && !comMilkCollection.getValue().isEmpty();
+
+        if (showDialog) {
+            if (!isValidDate) {
+                showAlert(Alert.AlertType.WARNING, "Date must be in YYYY-MM-DD format (e.g., 2025-07-31).");
+                return false;
+            }
+            if (!isValidQuantity) {
+                showAlert(Alert.AlertType.WARNING, "Quantity must be a valid number (e.g., 15.50).");
+                return false;
+            }
+            if (!isBuffaloIdSelected) {
+                showAlert(Alert.AlertType.WARNING, "Please select a Buffalo ID.");
+                return false;
+            }
+        }
+        return isValidDate && isValidQuantity && isBuffaloIdSelected;
+    }
+
+    private void showAlert(Alert.AlertType alertType, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(alertType);
+            alert.setTitle(alertType.name().replace("_", " "));
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        });
+    }
 
     @FXML
     public void btnGoToMilkCollectionOnAction(ActionEvent actionEvent) {
@@ -93,7 +211,7 @@ public class MilkCollectionController implements Initializable {
             ancMilkCollection.getChildren().add(anchorPane);
         }catch (Exception e){
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Something went wrong: " + e.getMessage(), ButtonType.OK).show();
+            showAlert(Alert.AlertType.ERROR, "Something went wrong: " + e.getMessage());
         }
     }
 
@@ -106,8 +224,8 @@ public class MilkCollectionController implements Initializable {
     public void btnDeleteOnAction(ActionEvent event) {
         String id = lblId.getText();
 
-        if (id == null || id.isEmpty() || id.equals("Auto Generated")) {
-            new Alert(Alert.AlertType.WARNING, "Please select a milk collection record to delete from the table.").show();
+        if (id == null || id.isEmpty() || lblId.getText().equals("MC001") || tblMilkCollection.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "Please select a milk collection record to delete from the table.");
             return;
         }
 
@@ -119,34 +237,68 @@ public class MilkCollectionController implements Initializable {
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
-                boolean isDelete = new MilkCollectionModel().deleteMikCollection(new MilkCollectionDto(id, null, 0.0, null));
-                if (isDelete) {
+                boolean isDeleted = milkCollectionBO.deleteMilkCollection(id);
+                if (isDeleted) {
+                    showAlert(Alert.AlertType.INFORMATION, "Milk Collection record deleted successfully!");
                     clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Milk Collection record deleted successfully!").show();
                 } else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to delete milk collection record.").show();
+                    showAlert(Alert.AlertType.ERROR, "Failed to delete milk collection record.");
                 }
-            } catch (Exception e) {
+            } catch (NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, e.getMessage());
+            } catch (SQLException e) {
+                showAlert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage());
                 e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage()).show();
             }
         }
     }
 
-    private void loadNextId () throws SQLException {
-        MilkCollectionModel milkCollectionModel = new MilkCollectionModel();
-        String nextId = milkCollectionModel.getNextId();
-        lblId.setText(nextId);
+    @FXML
+    public void btnSaveOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
+            applyValidationStyles();
+            return;
+        }
+
+        try {
+            double quantity = Double.parseDouble(txtQuantity.getText());
+            MilkCollectionDto milkCollectionDto = new MilkCollectionDto(
+                    lblId.getText(),
+                    txtDate.getText(),
+                    quantity,
+                    comMilkCollection.getValue()
+            );
+
+            milkCollectionBO.saveMilkCollection(milkCollectionDto);
+            showAlert(Alert.AlertType.INFORMATION, "Milk Collection has been saved successfully!");
+            clearFields();
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.ERROR, "Invalid number format for Quantity.");
+        } catch (SQLException | DuplicateException e) {
+            showAlert(Alert.AlertType.ERROR, "Failed to save milk collection: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @FXML
-    public void btnSaveOnAction(ActionEvent event) {
+    public void btnUpdateOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
+            applyValidationStyles();
+            return;
+        }
 
-        boolean isValidDate = txtDate.getText().matches(datePattern);
-        boolean isValidQuantity = txtQuantity.getText().matches(quantityPattern);
-        boolean isBuffaloIdSelected = comMilkCollection.getValue() != null && !comMilkCollection.getValue().isEmpty();
+        if (tblMilkCollection.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "Please select a milk collection record from the table to update.");
+            return;
+        }
 
-        if (isValidDate && isValidQuantity && isBuffaloIdSelected) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Update Milk Collection");
+        alert.setContentText("Are you sure you want to update this milk collection record?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 double quantity = Double.parseDouble(txtQuantity.getText());
                 MilkCollectionDto milkCollectionDto = new MilkCollectionDto(
@@ -156,101 +308,15 @@ public class MilkCollectionController implements Initializable {
                         comMilkCollection.getValue()
                 );
 
-                MilkCollectionModel milkCollectionModel = new MilkCollectionModel();
-                boolean isSave = milkCollectionModel.saveMilkCollection(milkCollectionDto);
-                if (isSave) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Milk Collection has been saved successfully").show();
-                } else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to save milk collection.").show();
-                }
+                milkCollectionBO.updateMilkCollection(milkCollectionDto);
+                showAlert(Alert.AlertType.INFORMATION, "Milk Collection has been updated successfully!");
+                clearFields();
             } catch (NumberFormatException e) {
-                new Alert(Alert.AlertType.ERROR, "Invalid number format for Quantity.").show();
-            } catch (Exception e) {
+                showAlert(Alert.AlertType.ERROR, "Invalid number format for Quantity.");
+            } catch (SQLException | NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, "An error occurred during update: " + e.getMessage());
                 e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "Failed to save milk collection due to a database error.").show();
             }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Date: YYYY-MM-DD, Quantity: e.g., 15.50).").show();
-            applyValidationStyles();
-        }
-    }
-
-    private void clearFields() throws SQLException {
-        lblId.setText("");
-        txtDate.setText("");
-        txtQuantity.setText("");
-        comMilkCollection.getSelectionModel().clearSelection();
-        resetValidationStyles();
-
-        loadNextId();
-        loadTable();
-    }
-
-    private void setupTableColumns(){
-        colId.setCellValueFactory(new PropertyValueFactory<>("id"));
-        colDate.setCellValueFactory(new PropertyValueFactory<>("date"));
-        colQuantity.setCellValueFactory(new PropertyValueFactory<>("quantity"));
-        colBuffaloId.setCellValueFactory(new PropertyValueFactory<>("buffaloId"));
-    }
-
-    private void loadTable() {
-        try {
-            MilkCollectionModel milkCollectionModel = new MilkCollectionModel();
-            ArrayList<MilkCollectionDto> milkCollectionDtos = milkCollectionModel.viewAllMilkCollection();
-            if (milkCollectionDtos != null) {
-                ObservableList<MilkCollectionDto> observableList = FXCollections.observableArrayList(milkCollectionDtos);
-                tblMilkCollection.setItems(observableList);
-            } else {
-                tblMilkCollection.setItems(FXCollections.emptyObservableList());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Error loading milk collection data into table.").show();
-        }
-    }
-
-    @FXML
-    public void btnUpdateOnAction(ActionEvent event) {
-
-        boolean isValidDate = txtDate.getText().matches(datePattern);
-        boolean isValidQuantity = txtQuantity.getText().matches(quantityPattern);
-        boolean isBuffaloIdSelected = comMilkCollection.getValue() != null && !comMilkCollection.getValue().isEmpty();
-
-        if (isValidDate && isValidQuantity && isBuffaloIdSelected) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmation Dialog");
-            alert.setHeaderText("Update Milk Collection");
-            alert.setContentText("Are you sure you want to update this milk collection record?");
-
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                try {
-                    double quantity = Double.parseDouble(txtQuantity.getText());
-                    MilkCollectionDto milkCollectionDto = new MilkCollectionDto(
-                            lblId.getText(),
-                            txtDate.getText(),
-                            quantity,
-                            comMilkCollection.getValue()
-                    );
-
-                    boolean isSave = MilkCollectionModel.updateMilkCollection(milkCollectionDto);
-                    if (isSave) {
-                        clearFields();
-                        new Alert(Alert.AlertType.INFORMATION, "Milk Collection has been updated successfully").show();
-                    } else {
-                        new Alert(Alert.AlertType.ERROR, "Failed to update milk collection.").show();
-                    }
-                } catch (NumberFormatException e) {
-                    new Alert(Alert.AlertType.ERROR, "Invalid number format for Quantity.").show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    new Alert(Alert.AlertType.ERROR, "An error occurred during update: " + e.getMessage()).show();
-                }
-            }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Date: YYYY-MM-DD, Quantity: e.g., 15.50).").show();
-            applyValidationStyles();
         }
     }
 
@@ -262,6 +328,7 @@ public class MilkCollectionController implements Initializable {
             txtQuantity.setText(String.valueOf(milkCollectionDto.getQuantity()));
             comMilkCollection.setValue(milkCollectionDto.getBuffaloId());
             resetValidationStyles();
+            updateButtonStates();
         }
     }
 
@@ -280,26 +347,27 @@ public class MilkCollectionController implements Initializable {
         } else {
             comMilkCollection.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtQuantityChange(KeyEvent keyEvent) {
         String quantity = txtQuantity.getText();
-        boolean isValid = quantity.matches(quantityPattern);
-        if (isValid) {
+        if (quantity.matches(quantityPattern)) {
             txtQuantity.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtQuantity.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtDateChange(KeyEvent keyEvent) {
         String date = txtDate.getText();
-        boolean isValid = date.matches(datePattern);
-        if (isValid) {
+        if (date.matches(datePattern)) {
             txtDate.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtDate.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     private void applyValidationStyles() {
