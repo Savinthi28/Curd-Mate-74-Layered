@@ -13,39 +13,23 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.StockDto;
 import lk.ijse.desktop.myfx.myfinalproject.Model.StockModel;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOFactory;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOTypes;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.StockBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.DuplicateException;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.NotFoundException;
 
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class StockController implements Initializable {
-    public AnchorPane getAncStock(){
-        return null;
-    }
-
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-        try {
-            loadNextId();
-            loadProductionId();
-            setupTableColumns();
-            clearFields();
-        } catch (SQLException e) {
-            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
-        }
-    }
-
-    private void loadProductionId() throws SQLException {
-        ArrayList<String> productionIds = StockModel.getAllProductionId();
-        ObservableList<String> observableList = FXCollections.observableArrayList(productionIds);
-        comProductionId.setItems(observableList);
-    }
 
     @FXML
     private AnchorPane ancStock;
-    private String path;
 
     @FXML
     private TableColumn<StockDto, String> colDate;
@@ -80,101 +64,91 @@ public class StockController implements Initializable {
     @FXML
     private TextField txtStockType;
 
+    @FXML private Button btnClear;
+    @FXML private Button btnDelete;
+    @FXML private Button btnSave;
+    @FXML private Button btnUpdate;
+
     private final String datePattern = "^\\d{4}-\\d{2}-\\d{2}$";
     private final String quantityPattern = "^[1-9]\\d*$";
     private final String stockTypePattern = "^[a-zA-Z ]{2,50}$";
 
-    @FXML
-    void btnClearOnAction(ActionEvent event) throws SQLException {
-        clearFields();
+    private final StockBO stockBO = BOFactory.getInstance().getBO(BOTypes.STOCK);
+
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        setupTableColumns();
+        setupFieldListeners();
+        try {
+            loadNextId();
+            loadProductionIds();
+            loadTable();
+            clearFields();
+            updateButtonStates();
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Initialization Error", "Error initializing controller: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
+        }
     }
 
-    @FXML
-    public void btnDeleteOnAction(ActionEvent event) {
-        String id = lblId.getText();
+    private void setupFieldListeners() {
+        txtDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtQuantity.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtStockType.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comProductionId.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        tblStock.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> updateButtonStates());
+    }
 
-        if (id == null || id.isEmpty() || id.equals("Auto Generated")) {
-            new Alert(Alert.AlertType.WARNING, "Please select a stock record to delete from the table.").show();
+    private void updateButtonStates() {
+        if (btnSave == null || btnUpdate == null || btnDelete == null || btnClear == null) {
             return;
         }
 
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirmation Dialog");
-        alert.setHeaderText("Delete Stock");
-        alert.setContentText("Are you sure you want to delete this stock record?");
+        boolean isAnyFieldEmpty = txtDate.getText().isEmpty() ||
+                txtQuantity.getText().isEmpty() ||
+                txtStockType.getText().isEmpty() ||
+                comProductionId.getValue() == null || comProductionId.getValue().isEmpty();
 
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                boolean isDeleted = new StockModel().deleteStock(new StockDto(id, null, null, 0, null));
-                if (isDeleted) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Stock Deleted Successfully!").show();
-                } else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to delete stock.").show();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage()).show();
-            }
+        boolean isValid = isValidInputs(false);
+
+        StockDto selectedItem = tblStock.getSelectionModel().getSelectedItem();
+
+        if (selectedItem == null) {
+            btnSave.setDisable(isAnyFieldEmpty || !isValid);
+            btnUpdate.setDisable(true);
+            btnDelete.setDisable(true);
+        } else {
+            btnSave.setDisable(true);
+            btnUpdate.setDisable(isAnyFieldEmpty || !isValid);
+            btnDelete.setDisable(false);
         }
+        btnClear.setDisable(false);
+    }
+
+    private void loadProductionIds() throws SQLException {
+        List<String> productionIds = stockBO.getAllProductionIds();
+        ObservableList<String> observableList = FXCollections.observableArrayList(productionIds);
+        comProductionId.setItems(observableList);
     }
 
     private void loadNextId() throws SQLException {
-        StockModel stockModel = new StockModel();
-        String id = stockModel.getNextId();
+        String id = stockBO.getNextStockId();
         lblId.setText(id);
-    }
-
-    @FXML
-    public void btnSaveOnAction(ActionEvent event) {
-
-        boolean isProductionIdSelected = comProductionId.getValue() != null && !comProductionId.getValue().isEmpty();
-        boolean isValidDate = txtDate.getText().matches(datePattern);
-        boolean isValidQuantity = txtQuantity.getText().matches(quantityPattern);
-        boolean isValidStockType = txtStockType.getText().matches(stockTypePattern);
-
-        if (isProductionIdSelected && isValidDate && isValidQuantity && isValidStockType) {
-            try {
-                int quantity = Integer.parseInt(txtQuantity.getText());
-                StockDto stockDto = new StockDto(
-                        lblId.getText(),
-                        comProductionId.getValue(),
-                        txtDate.getText(),
-                        quantity,
-                        txtStockType.getText()
-                );
-
-                StockModel stockModel = new StockModel();
-                boolean isSaved = stockModel.saveStock(stockDto);
-                if (isSaved) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Stock added successfully!").show();
-                } else {
-                    new Alert(Alert.AlertType.ERROR, "Something went wrong. Stock could not be added.").show();
-                }
-            } catch (NumberFormatException e) {
-                new Alert(Alert.AlertType.ERROR, "Invalid number format for Quantity.").show();
-            } catch (Exception e) {
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "Something went wrong: " + e.getMessage()).show();
-            }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Date: YYYY-MM-DD, Quantity: positive integer, Stock Type: alphabetic).").show();
-            applyValidationStyles();
-        }
     }
 
     private void clearFields() throws SQLException {
         lblId.setText("");
         comProductionId.getSelectionModel().clearSelection();
-        txtDate.setText("");
-        txtQuantity.setText("");
-        txtStockType.setText("");
+        txtDate.clear();
+        txtQuantity.clear();
+        txtStockType.clear();
         resetValidationStyles();
 
         loadNextId();
         loadTable();
+        tblStock.getSelectionModel().clearSelection();
+        updateButtonStates();
     }
 
     private void setupTableColumns() {
@@ -187,63 +161,157 @@ public class StockController implements Initializable {
 
     private void loadTable() {
         try {
-            StockModel stockModel = new StockModel();
-            ArrayList<StockDto> stockDtos = stockModel.viewAllStock();
-            if (stockDtos != null) {
-                ObservableList<StockDto> observableList = FXCollections.observableArrayList(stockDtos);
-                tblStock.setItems(observableList);
-            } else {
-                tblStock.setItems(FXCollections.emptyObservableList());
-            }
-        } catch (Exception e) {
+            List<StockDto> stockDtos = stockBO.getAllStock();
+            tblStock.setItems(FXCollections.observableArrayList(stockDtos));
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error Loading Data", "Error loading stock data into table: " + e.getMessage());
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Error loading stock data into table.").show();
         }
     }
 
-    @FXML
-    public void btnUpdateOnAction(ActionEvent event) {
-
+    private boolean isValidInputs(boolean showDialog) {
         boolean isProductionIdSelected = comProductionId.getValue() != null && !comProductionId.getValue().isEmpty();
         boolean isValidDate = txtDate.getText().matches(datePattern);
         boolean isValidQuantity = txtQuantity.getText().matches(quantityPattern);
         boolean isValidStockType = txtStockType.getText().matches(stockTypePattern);
 
-        if (isProductionIdSelected && isValidDate && isValidQuantity && isValidStockType) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmation Dialog");
-            alert.setHeaderText("Update Stock");
-            alert.setContentText("Are you sure you want to update this stock record?");
-
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                try {
-                    int quantity = Integer.parseInt(txtQuantity.getText());
-                    StockDto stockDto = new StockDto(
-                            lblId.getText(),
-                            comProductionId.getValue(),
-                            txtDate.getText(),
-                            quantity,
-                            txtStockType.getText()
-                    );
-
-                    boolean isUpdated = StockModel.updateSrock(stockDto);
-                    if (isUpdated) {
-                        clearFields();
-                        new Alert(Alert.AlertType.INFORMATION, "Stock updated successfully!").show();
-                    } else {
-                        new Alert(Alert.AlertType.ERROR, "Something went wrong. Stock could not be updated.").show();
-                    }
-                } catch (NumberFormatException e) {
-                    new Alert(Alert.AlertType.ERROR, "Invalid number format for Quantity.").show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    new Alert(Alert.AlertType.ERROR, "An error occurred during update: " + e.getMessage()).show();
-                }
+        if (showDialog) {
+            if (!isProductionIdSelected) {
+                showAlert(Alert.AlertType.WARNING, "Input Error", "Please select a Production ID.");
+                return false;
             }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Date: YYYY-MM-DD, Quantity: positive integer, Stock Type: alphabetic).").show();
+            if (!isValidDate) {
+                showAlert(Alert.AlertType.WARNING, "Input Error", "Date must be in YYYY-MM-DD format.");
+                return false;
+            }
+            if (!isValidQuantity) {
+                showAlert(Alert.AlertType.WARNING, "Input Error", "Quantity must be a positive integer.");
+                return false;
+            }
+            if (!isValidStockType) {
+                showAlert(Alert.AlertType.WARNING, "Input Error", "Stock Type must be alphabetic (2-50 characters) and can contain spaces.");
+                return false;
+            }
+        }
+        return isProductionIdSelected && isValidDate && isValidQuantity && isValidStockType;
+    }
+
+    private void showAlert(Alert.AlertType alertType, String title, String message) {
+        Alert alert = new Alert(alertType);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    @FXML
+    void btnClearOnAction(ActionEvent event) throws SQLException {
+        clearFields();
+    }
+
+    @FXML
+    public void btnDeleteOnAction(ActionEvent event) {
+        String idToDelete = lblId.getText();
+
+        if (tblStock.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "No Selection", "Please select a stock record from the table to delete.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Delete Stock");
+        alert.setContentText("Are you sure you want to delete this stock record?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                boolean isDeleted = stockBO.deleteStock(idToDelete);
+                if (isDeleted) {
+                    showAlert(Alert.AlertType.INFORMATION, "Deletion Successful", "Stock Deleted Successfully!");
+                    clearFields();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Deletion Failed", "Failed to delete stock.");
+                }
+            } catch (NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, "Deletion Failed", e.getMessage());
+            } catch (SQLException e) {
+                showAlert(Alert.AlertType.ERROR, "Database Error", "An error occurred during deletion: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @FXML
+    public void btnSaveOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
             applyValidationStyles();
+            return;
+        }
+
+        try {
+            int quantity = Integer.parseInt(txtQuantity.getText());
+            StockDto stockDto = new StockDto(
+                    lblId.getText(),
+                    comProductionId.getValue(),
+                    txtDate.getText(),
+                    quantity,
+                    txtStockType.getText()
+            );
+
+            stockBO.saveStock(stockDto);
+            showAlert(Alert.AlertType.INFORMATION, "Save Successful", "Stock added successfully!");
+            clearFields();
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.ERROR, "Input Error", "Invalid number format for Quantity.");
+        } catch (DuplicateException e) {
+            showAlert(Alert.AlertType.ERROR, "Save Failed", e.getMessage());
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Database Error", "Something went wrong: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    public void btnUpdateOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
+            applyValidationStyles();
+            return;
+        }
+
+        if (tblStock.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "No Selection", "Please select a stock record from the table to update.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Update Stock");
+        alert.setContentText("Are you sure you want to update this stock record?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                int quantity = Integer.parseInt(txtQuantity.getText());
+                StockDto stockDto = new StockDto(
+                        lblId.getText(),
+                        comProductionId.getValue(),
+                        txtDate.getText(),
+                        quantity,
+                        txtStockType.getText()
+                );
+
+                stockBO.updateStock(stockDto);
+                showAlert(Alert.AlertType.INFORMATION, "Update Successful", "Stock updated successfully!");
+                clearFields();
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.ERROR, "Input Error", "Invalid number format for Quantity.");
+            } catch (NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, "Update Failed", e.getMessage());
+            } catch (SQLException e) {
+                showAlert(Alert.AlertType.ERROR, "Database Error", "An error occurred during update: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
@@ -256,6 +324,7 @@ public class StockController implements Initializable {
             txtQuantity.setText(String.valueOf(stockDto.getQuantity()));
             txtStockType.setText(stockDto.getStockType());
             resetValidationStyles();
+            updateButtonStates();
         }
     }
 
@@ -265,20 +334,18 @@ public class StockController implements Initializable {
 
     private void navigateTo(String path){
         try {
-            ancStock.getChildren().clear();
-            AnchorPane anchorPane = FXMLLoader.load(getClass().getResource(path));
-
-            anchorPane.prefWidthProperty().bind(ancStock.widthProperty());
-            anchorPane.prefHeightProperty().bind(ancStock.heightProperty());
-            ancStock.getChildren().add(anchorPane);
+            AnchorPane newPane = FXMLLoader.load(getClass().getResource(path));
+            ancStock.getChildren().setAll(newPane);
+            newPane.prefWidthProperty().bind(ancStock.widthProperty());
+            newPane.prefHeightProperty().bind(ancStock.heightProperty());
         }catch (Exception e){
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Something went wrong: " + e.getMessage(), ButtonType.OK).show();
+            showAlert(Alert.AlertType.ERROR, "Navigation Error", "Could not load the view: " + e.getMessage());
         }
     }
 
     public void btnGoToStockOnAction(ActionEvent actionEvent) {
-        navigateTo("/View/StockView.fxml");
+
     }
 
     public void comProductionIdOnAction(ActionEvent actionEvent) {
@@ -288,6 +355,7 @@ public class StockController implements Initializable {
         } else {
             comProductionId.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtDateChange(KeyEvent keyEvent) {
@@ -298,6 +366,7 @@ public class StockController implements Initializable {
         } else {
             txtDate.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtQuantityChange(KeyEvent keyEvent) {
@@ -308,6 +377,7 @@ public class StockController implements Initializable {
         } else {
             txtQuantity.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtStockTypeChange(KeyEvent keyEvent) {
@@ -318,6 +388,7 @@ public class StockController implements Initializable {
         } else {
             txtStockType.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     private void applyValidationStyles() {
