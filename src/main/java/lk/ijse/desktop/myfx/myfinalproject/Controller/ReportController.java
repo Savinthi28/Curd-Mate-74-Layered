@@ -11,31 +11,20 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.ReportsDto;
 import lk.ijse.desktop.myfx.myfinalproject.Model.ReportsModel;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOFactory;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOTypes;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.ReportBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.DuplicateException;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.NotFoundException;
 
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class ReportController implements Initializable {
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-        try {
-            loadNextId();
-            loadUserId();
-            setupTableColumns();
-            clearFields();
-        } catch (SQLException e) {
-            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
-        }
-    }
-
-    private void loadUserId() throws SQLException {
-        ArrayList<String> userIds = ReportsModel.getAllUserId();
-        ObservableList<String> users = FXCollections.observableArrayList(userIds);
-        comUserId.setItems(users);
-    }
 
     @FXML
     private TableColumn<ReportsDto, String> colDate;
@@ -70,97 +59,91 @@ public class ReportController implements Initializable {
     @FXML
     private ComboBox<String> comUserId;
 
+    @FXML private Button btnClear;
+    @FXML private Button btnDelete;
+    @FXML private Button btnSave;
+    @FXML private Button btnUpdate;
+
     private final String datePattern = "^\\d{4}-\\d{2}-\\d{2}$";
     private final String typePattern = "^[a-zA-Z0-9 ]{2,50}$";
     private final String generatedByPattern = "^[a-zA-Z ]{2,100}$";
 
-    @FXML
-    void btnClearOnAction(ActionEvent event) throws SQLException {
-        clearFields();
+    private final ReportBO reportBO = BOFactory.getInstance().getBO(BOTypes.REPORT);
+
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        setupTableColumns();
+        setupFieldListeners();
+        try {
+            loadNextId();
+            loadUserIds();
+            loadTable();
+            clearFields();
+            updateButtonStates();
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Initialization Error", "Error initializing controller: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Error initializing controller: " + e.getMessage(), e);
+        }
     }
 
-    @FXML
-    public void btnDeleteOnAction(ActionEvent event) {
-        String idToDelete = lblId.getText();
-        if (idToDelete == null || idToDelete.isEmpty() || idToDelete.equals("Auto Generated")) {
-            new Alert(Alert.AlertType.WARNING, "Please select a Report from the table or enter an ID to delete.").show();
+    private void setupFieldListeners() {
+        txtDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtType.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtGenerateBy.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comUserId.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        tblReports.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> updateButtonStates());
+    }
+
+    private void updateButtonStates() {
+        if (btnSave == null || btnUpdate == null || btnDelete == null || btnClear == null) {
             return;
         }
 
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirmation Dialog");
-        alert.setHeaderText("Delete Report");
-        alert.setContentText("Are you sure you want to delete this report?");
+        boolean isAnyFieldEmpty = txtDate.getText().isEmpty() ||
+                txtType.getText().isEmpty() ||
+                txtGenerateBy.getText().isEmpty() ||
+                comUserId.getValue() == null || comUserId.getValue().isEmpty();
 
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                boolean isDeleted = ReportsModel.deleteReports(idToDelete);
-                if (isDeleted) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Report Deleted Successfully!").show();
-                } else {
-                    new Alert(Alert.AlertType.ERROR, "Failed to delete Report.").show();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "Error deleting Report: " + e.getMessage()).show();
-            }
+        boolean isValid = isValidInputs(false);
+
+        ReportsDto selectedItem = tblReports.getSelectionModel().getSelectedItem();
+
+        if (selectedItem == null) {
+            btnSave.setDisable(isAnyFieldEmpty || !isValid);
+            btnUpdate.setDisable(true);
+            btnDelete.setDisable(true);
+        } else {
+            btnSave.setDisable(true);
+            btnUpdate.setDisable(isAnyFieldEmpty || !isValid);
+            btnDelete.setDisable(false);
         }
+        btnClear.setDisable(false);
+    }
+
+    private void loadUserIds() throws SQLException {
+        List<String> userIds = reportBO.getAllUserIds();
+        ObservableList<String> users = FXCollections.observableArrayList(userIds);
+        comUserId.setItems(users);
     }
 
     private void loadNextId() throws SQLException {
-        ReportsModel reportsModel = new ReportsModel();
-        String id = reportsModel.getNextId();
+        String id = reportBO.getNextReportId();
         lblId.setText(id);
-    }
-
-    @FXML
-    void btnSaveOnAction(ActionEvent event) {
-
-        boolean isUserIdSelected = comUserId.getValue() != null && !comUserId.getValue().isEmpty();
-        boolean isValidDate = txtDate.getText().matches(datePattern);
-        boolean isValidType = txtType.getText().matches(typePattern);
-        boolean isValidGeneratedBy = txtGenerateBy.getText().matches(generatedByPattern);
-
-        if (isUserIdSelected && isValidDate && isValidType && isValidGeneratedBy) {
-            ReportsDto reportsDto = new ReportsDto(
-                    lblId.getText(),
-                    txtDate.getText(),
-                    comUserId.getValue(),
-                    txtType.getText(),
-                    txtGenerateBy.getText()
-            );
-
-            try {
-                ReportsModel reportsModel = new ReportsModel();
-                boolean isSaved = reportsModel.saveReport(reportsDto);
-                if (isSaved) {
-                    clearFields();
-                    new Alert(Alert.AlertType.INFORMATION, "Report has been saved successfully!").show();
-                } else {
-                    new Alert(Alert.AlertType.ERROR, "Report could not be saved.").show();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                new Alert(Alert.AlertType.ERROR, "Report could not be saved due to an error: " + e.getMessage()).show();
-            }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly. (Date: YYYY-MM-DD, Report Type: alphanumeric, Generated By: alphabetic).").show();
-            applyValidationStyles();
-        }
     }
 
     private void clearFields() throws SQLException {
         lblId.setText("");
-        txtDate.setText("");
+        txtDate.clear();
         comUserId.getSelectionModel().clearSelection();
-        txtType.setText("");
-        txtGenerateBy.setText("");
+        txtType.clear();
+        txtGenerateBy.clear();
         resetValidationStyles();
 
         loadNextId();
         loadTable();
+        tblReports.getSelectionModel().clearSelection();
+        updateButtonStates();
     }
 
     private void setupTableColumns() {
@@ -173,60 +156,151 @@ public class ReportController implements Initializable {
 
     private void loadTable() {
         try {
-            ReportsModel reportsModel = new ReportsModel();
-            ArrayList<ReportsDto> reportsDtos = reportsModel.viewAllReports();
-            if (reportsDtos != null) {
-                ObservableList<ReportsDto> List = FXCollections.observableArrayList(reportsDtos);
-                tblReports.setItems(List);
-            } else {
-                tblReports.setItems(FXCollections.emptyObservableList());
-            }
-        } catch (Exception e) {
+            List<ReportsDto> reportsDtos = reportBO.getAllReports();
+            tblReports.setItems(FXCollections.observableArrayList(reportsDtos));
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error Loading Data", "Error loading report data into table: " + e.getMessage());
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Error loading report data into table.").show();
         }
     }
 
-    @FXML
-    public void btnUpdateOnAction(ActionEvent event) {
-
+    private boolean isValidInputs(boolean showDialog) {
         boolean isUserIdSelected = comUserId.getValue() != null && !comUserId.getValue().isEmpty();
         boolean isValidDate = txtDate.getText().matches(datePattern);
         boolean isValidType = txtType.getText().matches(typePattern);
         boolean isValidGeneratedBy = txtGenerateBy.getText().matches(generatedByPattern);
 
-        if (isUserIdSelected && isValidDate && isValidType && isValidGeneratedBy) {
-            ReportsDto reportsDto = new ReportsDto(
-                    lblId.getText(),
-                    txtDate.getText(),
-                    comUserId.getValue(),
-                    txtType.getText(),
-                    txtGenerateBy.getText()
-            );
-
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmation Dialog");
-            alert.setHeaderText("Update Report");
-            alert.setContentText("Are you sure you want to update this report?");
-
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                try {
-                    boolean isUpdated = ReportsModel.updateReports(reportsDto);
-                    if (isUpdated) {
-                        clearFields();
-                        new Alert(Alert.AlertType.INFORMATION, "Report has been updated successfully!").show();
-                    } else {
-                        new Alert(Alert.AlertType.ERROR, "Report could not be updated.").show();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    new Alert(Alert.AlertType.ERROR, "Report could not be updated due to an error: " + e.getMessage()).show();
-                }
+        if (showDialog) {
+            if (!isUserIdSelected) {
+                showAlert(Alert.AlertType.WARNING, "Input Error", "Please select a User ID.");
+                return false;
             }
-        } else {
-            new Alert(Alert.AlertType.WARNING, "Please ensure all fields are filled correctly (Date: YYYY-MM-DD, Report Type: alphanumeric, Generated By: alphabetic).").show();
+            if (!isValidDate) {
+                showAlert(Alert.AlertType.WARNING, "Input Error", "Date must be in YYYY-MM-DD format.");
+                return false;
+            }
+            if (!isValidType) {
+                showAlert(Alert.AlertType.WARNING, "Input Error", "Report Type must be alphanumeric (2-50 characters).");
+                return false;
+            }
+            if (!isValidGeneratedBy) {
+                showAlert(Alert.AlertType.WARNING, "Input Error", "Generated By must be alphabetic (2-100 characters) and can contain spaces.");
+                return false;
+            }
+        }
+        return isUserIdSelected && isValidDate && isValidType && isValidGeneratedBy;
+    }
+
+    private void showAlert(Alert.AlertType alertType, String title, String message) {
+        Alert alert = new Alert(alertType);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    @FXML
+    void btnClearOnAction(ActionEvent event) throws SQLException {
+        clearFields();
+    }
+
+    @FXML
+    public void btnDeleteOnAction(ActionEvent event) {
+        String idToDelete = lblId.getText();
+
+        if (tblReports.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "No Selection", "Please select a Report from the table to delete.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Delete Report");
+        alert.setContentText("Are you sure you want to delete this report?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                boolean isDeleted = reportBO.deleteReport(idToDelete);
+                if (isDeleted) {
+                    showAlert(Alert.AlertType.INFORMATION, "Deletion Successful", "Report Deleted Successfully!");
+                    clearFields();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Deletion Failed", "Failed to delete Report.");
+                }
+            } catch (NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, "Deletion Failed", e.getMessage());
+            } catch (SQLException e) {
+                showAlert(Alert.AlertType.ERROR, "Database Error", "Error deleting Report: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @FXML
+    void btnSaveOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
             applyValidationStyles();
+            return;
+        }
+
+        ReportsDto reportsDto = new ReportsDto(
+                lblId.getText(),
+                txtDate.getText(),
+                comUserId.getValue(),
+                txtType.getText(),
+                txtGenerateBy.getText()
+        );
+
+        try {
+            reportBO.saveReport(reportsDto);
+            showAlert(Alert.AlertType.INFORMATION, "Save Successful", "Report has been saved successfully!");
+            clearFields();
+        } catch (DuplicateException e) {
+            showAlert(Alert.AlertType.ERROR, "Save Failed", e.getMessage());
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Database Error", "Report could not be saved due to an error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    public void btnUpdateOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
+            applyValidationStyles();
+            return;
+        }
+
+        if (tblReports.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "No Selection", "Please select a Report from the table to update.");
+            return;
+        }
+
+        ReportsDto reportsDto = new ReportsDto(
+                lblId.getText(),
+                txtDate.getText(),
+                comUserId.getValue(),
+                txtType.getText(),
+                txtGenerateBy.getText()
+        );
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Update Report");
+        alert.setContentText("Are you sure you want to update this report?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                reportBO.updateReport(reportsDto);
+                showAlert(Alert.AlertType.INFORMATION, "Update Successful", "Report has been updated successfully!");
+                clearFields();
+            } catch (NotFoundException e) {
+                showAlert(Alert.AlertType.ERROR, "Update Failed", e.getMessage());
+            } catch (SQLException e) {
+                showAlert(Alert.AlertType.ERROR, "Database Error", "Report could not be updated due to an error: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
@@ -239,6 +313,7 @@ public class ReportController implements Initializable {
             txtType.setText(reportsDto.getReportType());
             txtGenerateBy.setText(reportsDto.getGenerateBy());
             resetValidationStyles();
+            updateButtonStates();
         }
     }
 
@@ -249,6 +324,7 @@ public class ReportController implements Initializable {
         } else {
             comUserId.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtDateChange(KeyEvent keyEvent) {
@@ -259,6 +335,7 @@ public class ReportController implements Initializable {
         } else {
             txtDate.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtTypeChange(KeyEvent keyEvent) {
@@ -269,6 +346,7 @@ public class ReportController implements Initializable {
         } else {
             txtType.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     public void txtGenerateByChange(KeyEvent keyEvent) {
@@ -279,6 +357,7 @@ public class ReportController implements Initializable {
         } else {
             txtGenerateBy.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
         }
+        updateButtonStates();
     }
 
     private void applyValidationStyles() {
