@@ -1,4 +1,7 @@
 package lk.ijse.desktop.myfx.myfinalproject.dao.custom;
 
-public interface SupplierDAO {
+import lk.ijse.desktop.myfx.myfinalproject.dao.CurdDAO;
+import lk.ijse.desktop.myfx.myfinalproject.entity.Supplier;
+
+public interface SupplierDAO extends CurdDAO<Supplier, String> {
 }
