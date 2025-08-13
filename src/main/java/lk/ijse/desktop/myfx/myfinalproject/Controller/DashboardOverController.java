@@ -29,86 +29,87 @@ public class DashboardOverController implements Initializable {
     @FXML
     private Label lblTodaySalesRevenue;
 
-    private MilkCollectionModel milkCollectionModel;
-    private StockModel stockModel;
-    private OrderModel orderModel;
-    private DailyIncomeModel dailyIncomeModel;
+//    private MilkCollectionModel milkCollectionModel;
+//    private StockModel stockModel;
+//    private OrderModel orderModel;
+//    private DailyIncomeModel dailyIncomeModel;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        milkCollectionModel = new MilkCollectionModel();
-        stockModel = new StockModel();
-        orderModel = new OrderModel();
-        dailyIncomeModel = new DailyIncomeModel();
-
-        setTotalMilkCollection();
-        setTotalCurrentMilkStock();
-        setTotalPendingDeliveries();
-        setTotalTodaySalesRevenue();
-    }
-
-    private void setTotalMilkCollection() {
-        try {
-            ArrayList<MilkCollectionDto> allCollections = milkCollectionModel.viewAllMilkCollection();
-            double totalToday = 0;
-            LocalDate today = LocalDate.now();
-
-            for (MilkCollectionDto dto : allCollections) {
-                LocalDate collectionDate = LocalDate.parse(dto.getDate());
-
-                if (collectionDate.isEqual(today)) {
-                    totalToday += dto.getQuantity();
-                }
-            }
-            lblMilkCollectionTotal.setText(String.format("%.2f Liters", totalToday));
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            lblMilkCollectionTotal.setText("Error");
-        }
-    }
-
-    private void setTotalCurrentMilkStock() {
-        try {
-            ArrayList<StockDto> allStocks = stockModel.viewAllStock();
-            int totalStockQuantity = 0;
-
-            for (StockDto dto : allStocks) {
-                totalStockQuantity += dto.getQuantity();
-            }
-            lblCurrentMilkStock.setText(String.format("%d Liters", totalStockQuantity));
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            lblCurrentMilkStock.setText("Error");
-        }
-    }
-
-    private void setTotalPendingDeliveries() {
-        try {
-            ArrayList<OrderDto> allOrders = orderModel.viewAllOrder();
-            lblPendingDeliveries.setText(String.valueOf(allOrders.size()));
-        } catch (SQLException e) {
-            e.printStackTrace();
-            lblPendingDeliveries.setText("Error");
-        }
-    }
-
-    private void setTotalTodaySalesRevenue() {
-        try {
-            ArrayList<DailyIncomeDto> allIncomes = dailyIncomeModel.viewDailyIncome();
-            double totalTodayRevenue = 0;
-            LocalDate today = LocalDate.now();
-
-            for (DailyIncomeDto dto : allIncomes) {
-                LocalDate incomeDate = LocalDate.parse(dto.getDate());
-
-                if (incomeDate.isEqual(today)) {
-                    totalTodayRevenue += dto.getAmount();
-                }
-            }
-            lblTodaySalesRevenue.setText(String.format("LKR %.2f", totalTodayRevenue));
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-            lblTodaySalesRevenue.setText("Error");
-        }
+//        milkCollectionModel = new MilkCollectionModel();
+//        stockModel = new StockModel();
+//        orderModel = new OrderModel();
+//        dailyIncomeModel = new DailyIncomeModel();
+//
+//        setTotalMilkCollection();
+//        setTotalCurrentMilkStock();
+//        setTotalPendingDeliveries();
+//        setTotalTodaySalesRevenue();
+//    }
+//
+//    private void setTotalMilkCollection() {
+//        try {
+//            ArrayList<MilkCollectionDto> allCollections = milkCollectionModel.viewAllMilkCollection();
+//            double totalToday = 0;
+//            LocalDate today = LocalDate.now();
+//
+//            for (MilkCollectionDto dto : allCollections) {
+//                LocalDate collectionDate = LocalDate.parse(dto.getDate());
+//
+//                if (collectionDate.isEqual(today)) {
+//                    totalToday += dto.getQuantity();
+//                }
+//            }
+//            lblMilkCollectionTotal.setText(String.format("%.2f Liters", totalToday));
+//        } catch (SQLException | ClassNotFoundException e) {
+//            e.printStackTrace();
+//            lblMilkCollectionTotal.setText("Error");
+//        }
+//    }
+//
+//    private void setTotalCurrentMilkStock() {
+//        try {
+//            ArrayList<StockDto> allStocks = stockModel.viewAllStock();
+//            int totalStockQuantity = 0;
+//
+//            for (StockDto dto : allStocks) {
+//                totalStockQuantity += dto.getQuantity();
+//            }
+//            lblCurrentMilkStock.setText(String.format("%d Liters", totalStockQuantity));
+//        } catch (SQLException | ClassNotFoundException e) {
+//            e.printStackTrace();
+//            lblCurrentMilkStock.setText("Error");
+//        }
+//    }
+//
+//    private void setTotalPendingDeliveries() {
+//        try {
+//            ArrayList<OrderDto> allOrders = orderModel.viewAllOrder();
+//            lblPendingDeliveries.setText(String.valueOf(allOrders.size()));
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//            lblPendingDeliveries.setText("Error");
+//        }
+//    }
+//
+//    private void setTotalTodaySalesRevenue() {
+//        try {
+//            ArrayList<DailyIncomeDto> allIncomes = dailyIncomeModel.viewDailyIncome();
+//            double totalTodayRevenue = 0;
+//            LocalDate today = LocalDate.now();
+//
+//            for (DailyIncomeDto dto : allIncomes) {
+//                LocalDate incomeDate = LocalDate.parse(dto.getDate());
+//
+//                if (incomeDate.isEqual(today)) {
+//                    totalTodayRevenue += dto.getAmount();
+//                }
+//            }
+//            lblTodaySalesRevenue.setText(String.format("LKR %.2f", totalTodayRevenue));
+//        } catch (SQLException | ClassNotFoundException e) {
+//            e.printStackTrace();
+//            lblTodaySalesRevenue.setText("Error");
+//        }
+//    }
     }
 }

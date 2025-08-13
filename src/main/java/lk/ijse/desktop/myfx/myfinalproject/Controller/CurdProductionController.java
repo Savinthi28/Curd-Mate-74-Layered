@@ -30,177 +30,36 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
-
 public class CurdProductionController implements Initializable {
-    public AnchorPane getAncCurdProduction(){
-        return null;
-    }
 
+    @FXML private AnchorPane ancCurdProduction;
+    @FXML private TableColumn<CurdProductionDto, String> colExpiryDate;
+    @FXML private TableColumn<CurdProductionDto, String> colId;
+    @FXML private TableColumn<CurdProductionDto, String> colIngredients;
+    @FXML private TableColumn<CurdProductionDto, Integer> colPotsSize;
+    @FXML private TableColumn<CurdProductionDto, String> colProductionDate;
+    @FXML private TableColumn<CurdProductionDto, Integer> colQuantity;
+    @FXML private TableColumn<CurdProductionDto, String> colStorageID;
+    @FXML private TableView<CurdProductionDto> tblCurdProduction;
+    @FXML private TextField txtExpiryDate;
+    @FXML private Label lblId;
+    @FXML private TextField txtIngredients;
+    @FXML private ComboBox<Integer> comPotsSize;
+    @FXML private ComboBox<String> comStorageId;
+    @FXML private TextField txtProductionDate;
+    @FXML private TextField txtQuantity;
 
-    @FXML
-    private AnchorPane ancCurdProduction;
-    private String path;
+    @FXML private Button btnClear;
+    @FXML private Button btnDelete;
+    @FXML private Button btnSave;
+    @FXML private Button btnUpdate;
 
-    @FXML
-    private TableColumn<CurdProductionDto, String> colExpiryDate;
-
-    @FXML
-    private TableColumn<CurdProductionDto, String> colId;
-
-    @FXML
-    private TableColumn<CurdProductionDto, String> colIngredients;
-
-    @FXML
-    private TableColumn<CurdProductionDto, Integer> colPotsSize;
-
-    @FXML
-    private TableColumn<CurdProductionDto, String> colProductionDate;
-
-    @FXML
-    private TableColumn<CurdProductionDto, Integer> colQuantity;
-
-    @FXML
-    private TableColumn<CurdProductionDto, String> colStorageID;
-
-    @FXML
-    private TableView<CurdProductionDto> tblCurdProduction;
-
-    @FXML
-    private TextField txtExpiryDate;
-
-    @FXML
-    private Label lblId;
-
-    @FXML
-    private TextField txtIngredients;
-
-    @FXML
-    private ComboBox<Integer> comPotsSize;
-
-    @FXML
-    private ComboBox<String> comStorageId;
-
-    @FXML
-    private TextField txtProductionDate;
-
-    @FXML
-    private TextField txtQuantity;
-
-    @FXML
-    private Button btnClear;
-
-    @FXML
-    private Button btnDelete;
-
-    @FXML
-    private Button btnSave;
-
-    @FXML
-    private Button btnUpdate;
 
     private final String quantityPattern = "^\\d+$";
     private final String ingredientsPattern = "^[A-Za-z0-9,.'\\-\\s]+$";
     private final String datePattern = "^\\d{4}-\\d{2}-\\d{2}$";
 
     private final CurdProductionBO curdProductionBO = BOFactory.getInstance().getBO(BOTypes.CURD_PRODUCTION);
-
-    @FXML
-    void btnClearOnAction(ActionEvent event) throws SQLException {
-        clearFields();
-    }
-
-    @FXML
-    public void btnDeleteOnAction(ActionEvent event) {
-        String productionId = lblId.getText();
-
-        if (productionId == null || productionId.isEmpty() || lblId.getText().equals("CP001") || tblCurdProduction.getSelectionModel().getSelectedItem() == null) {
-            showAlert(Alert.AlertType.WARNING, "Please select a production record to delete from the table.");
-            return;
-        }
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirmation Dialog");
-        alert.setHeaderText("Delete Production");
-        alert.setContentText("Are you sure you want to delete this production record?");
-
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                boolean isDeleted = curdProductionBO.deleteCurdProduction(productionId);
-                if (isDeleted) {
-                    showAlert(Alert.AlertType.INFORMATION, "Production record deleted successfully.");
-                    clearFields();
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Failed to delete production record.");
-                }
-            } catch (NotFoundException | InUseException e) {
-                showAlert(Alert.AlertType.ERROR, e.getMessage());
-            } catch (SQLException e) {
-                showAlert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
-    }
-
-
-    private void loadNextId () throws SQLException {
-        String nextId = curdProductionBO.getNextCurdProductionId();
-        lblId.setText(nextId);
-    }
-
-    @FXML
-    public void btnSaveOnAction(ActionEvent event)  {
-        if (!isValidInputs(true)) {
-            applyValidationStyles();
-            return;
-        }
-
-        try {
-            LocalDate productionDate = LocalDate.parse(txtProductionDate.getText());
-            LocalDate expiryDate = LocalDate.parse(txtExpiryDate.getText());
-            int quantity = Integer.parseInt(txtQuantity.getText());
-            int potsSize = comPotsSize.getValue();
-
-            CurdProductionDto curdProductionDto = new CurdProductionDto(
-                    lblId.getText(),
-                    productionDate,
-                    expiryDate,
-                    quantity,
-                    potsSize,
-                    txtIngredients.getText(),
-                    comStorageId.getValue()
-            );
-
-            curdProductionBO.saveCurdProduction(curdProductionDto);
-            showAlert(Alert.AlertType.INFORMATION, "Curd Production has been saved successfully!");
-            clearFields();
-        } catch (NumberFormatException e) {
-            showAlert(Alert.AlertType.ERROR, "Invalid number format for Quantity or Pot Size.");
-        } catch (DateTimeParseException e) {
-            showAlert(Alert.AlertType.ERROR, "Invalid date format. Please use YYYY-MM-DD.");
-        } catch (DuplicateException e) {
-            showAlert(Alert.AlertType.ERROR, e.getMessage());
-        } catch (SQLException e) {
-            showAlert(Alert.AlertType.ERROR, "An error occurred while saving Curd Production: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-
-    private void clearFields() throws SQLException {
-        txtExpiryDate.setText("");
-        txtIngredients.setText("");
-        comPotsSize.getSelectionModel().clearSelection();
-        txtProductionDate.setText("");
-        txtQuantity.setText("");
-        comStorageId.getSelectionModel().clearSelection();
-        resetValidationStyles();
-
-        loadNextId();
-        loadTable();
-        tblCurdProduction.getSelectionModel().clearSelection();
-        updateButtonStates();
-    }
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -220,14 +79,34 @@ public class CurdProductionController implements Initializable {
         }
     }
 
-    private void showAlert(Alert.AlertType alertType, String s) {
-        Platform.runLater(() -> {
-            Alert alert = new Alert(alertType);
-            alert.setTitle(alertType.name().replace("_", " "));
-            alert.setHeaderText(null);
-            alert.setContentText(s);
-            alert.showAndWait();
-        });
+    private void setupTableColumns() {
+        colId.setCellValueFactory(new PropertyValueFactory<>("productionId"));
+        colProductionDate.setCellValueFactory(new PropertyValueFactory<>("productionDate"));
+        colExpiryDate.setCellValueFactory(new PropertyValueFactory<>("expiryDate"));
+        colQuantity.setCellValueFactory(new PropertyValueFactory<>("quantity"));
+        colPotsSize.setCellValueFactory(new PropertyValueFactory<>("potsSize"));
+        colIngredients.setCellValueFactory(new PropertyValueFactory<>("ingredients"));
+        colStorageID.setCellValueFactory(new PropertyValueFactory<>("storageId"));
+    }
+
+    private void loadTable() {
+        try {
+            List<CurdProductionDto> curdProductionDtos = curdProductionBO.getAllCurdProductions();
+            tblCurdProduction.setItems(FXCollections.observableArrayList(curdProductionDtos));
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error loading curd production data into table: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void setupFieldListeners() {
+        txtQuantity.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtIngredients.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtProductionDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        txtExpiryDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comPotsSize.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        comStorageId.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
+        tblCurdProduction.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> updateButtonStates());
     }
 
     private void updateButtonStates() {
@@ -256,6 +135,39 @@ public class CurdProductionController implements Initializable {
             btnDelete.setDisable(false);
         }
         btnClear.setDisable(false);
+    }
+
+
+    private void loadNextId() throws SQLException {
+        String nextId = curdProductionBO.getNextCurdProductionId();
+        lblId.setText(nextId);
+    }
+
+    private void clearFields() throws SQLException {
+        txtExpiryDate.clear();
+        txtIngredients.clear();
+        comPotsSize.getSelectionModel().clearSelection();
+        txtProductionDate.clear();
+        txtQuantity.clear();
+        comStorageId.getSelectionModel().clearSelection();
+        resetValidationStyles();
+
+        loadNextId();
+        loadTable();
+        tblCurdProduction.getSelectionModel().clearSelection();
+        updateButtonStates();
+    }
+
+    private void loadStorageId() throws SQLException {
+        List<String> storageList = curdProductionBO.getAllStorageIds();
+        ObservableList<String> observableList = FXCollections.observableArrayList(storageList);
+        comStorageId.setItems(observableList);
+    }
+
+    private void loadPotsSize() throws SQLException {
+        List<Integer> potsSizeList = curdProductionBO.getAllPotsSizes();
+        ObservableList<Integer> observableList = FXCollections.observableArrayList(potsSizeList);
+        comPotsSize.setItems(observableList);
     }
 
     private boolean isValidInputs(boolean showDialog) {
@@ -295,45 +207,88 @@ public class CurdProductionController implements Initializable {
         return isValidQuantity && isValidIngredients && isValidProductionDate && isValidExpiryDate && isPotSizeSelected && isStorageIdSelected;
     }
 
-
-    private void setupFieldListeners() {
-        txtQuantity.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
-        txtIngredients.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
-        txtProductionDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
-        txtExpiryDate.textProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
-        comPotsSize.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
-        comStorageId.valueProperty().addListener((observable, oldValue, newValue) -> updateButtonStates());
-        tblCurdProduction.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> updateButtonStates());
+    private void showAlert(Alert.AlertType alertType, String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(alertType);
+            alert.setTitle(alertType.name().replace("_", " "));
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        });
     }
 
-    private void loadStorageId() throws SQLException {
-        List<String> storageList = curdProductionBO.getAllStorageIds();
-        ObservableList<String> observableList = FXCollections.observableArrayList(storageList);
-        comStorageId.setItems(observableList);
+    @FXML
+    void btnClearOnAction(ActionEvent event) throws SQLException {
+        clearFields();
     }
 
-    private void loadPotsSize() throws SQLException {
-        List<Integer> potsSizeList = curdProductionBO.getAllPotsSizes();
-        ObservableList<Integer> observableList = FXCollections.observableArrayList(potsSizeList);
-        comPotsSize.setItems(observableList);
+    @FXML
+    public void btnDeleteOnAction(ActionEvent event) {
+        String productionId = lblId.getText();
+
+        if (productionId == null || productionId.isEmpty() || lblId.getText().equals("CP001") || tblCurdProduction.getSelectionModel().getSelectedItem() == null) {
+            showAlert(Alert.AlertType.WARNING, "Please select a production record to delete from the table.");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation Dialog");
+        alert.setHeaderText("Delete Production");
+        alert.setContentText("Are you sure you want to delete this production record?");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                boolean isDeleted = curdProductionBO.deleteCurdProduction(productionId);
+                if (isDeleted) {
+                    showAlert(Alert.AlertType.INFORMATION, "Production record deleted successfully.");
+                    clearFields();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Failed to delete production record.");
+                }
+            } catch (NotFoundException | InUseException e) {
+                showAlert(Alert.AlertType.ERROR, e.getMessage());
+            } catch (SQLException e) {
+                showAlert(Alert.AlertType.ERROR, "An error occurred during deletion: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 
-    private void setupTableColumns() {
-        colId.setCellValueFactory(new PropertyValueFactory<>("productionId"));
-        colProductionDate.setCellValueFactory(new PropertyValueFactory<>("productionDate"));
-        colExpiryDate.setCellValueFactory(new PropertyValueFactory<>("expiryDate"));
-        colQuantity.setCellValueFactory(new PropertyValueFactory<>("quantity"));
-        colPotsSize.setCellValueFactory(new PropertyValueFactory<>("potsSize"));
-        colIngredients.setCellValueFactory(new PropertyValueFactory<>("ingredients"));
-        colStorageID.setCellValueFactory(new PropertyValueFactory<>("storageId"));
-    }
+    @FXML
+    public void btnSaveOnAction(ActionEvent event) {
+        if (!isValidInputs(true)) {
+            applyValidationStyles();
+            return;
+        }
 
-    private void loadTable() {
         try {
-            List<CurdProductionDto> curdProductionDtos = curdProductionBO.getAllCurdProductions();
-            tblCurdProduction.setItems(FXCollections.observableArrayList(curdProductionDtos));
+            LocalDate productionDate = LocalDate.parse(txtProductionDate.getText());
+            LocalDate expiryDate = LocalDate.parse(txtExpiryDate.getText());
+            int quantity = Integer.parseInt(txtQuantity.getText());
+            int potsSize = comPotsSize.getValue();
+
+            CurdProductionDto curdProductionDto = new CurdProductionDto(
+                    lblId.getText(),
+                    productionDate,
+                    expiryDate,
+                    quantity,
+                    potsSize,
+                    txtIngredients.getText(),
+                    comStorageId.getValue()
+            );
+
+            curdProductionBO.saveCurdProduction(curdProductionDto);
+            showAlert(Alert.AlertType.INFORMATION, "Curd Production has been saved successfully!");
+            clearFields();
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.ERROR, "Invalid number format for Quantity or Pot Size.");
+        } catch (DateTimeParseException e) {
+            showAlert(Alert.AlertType.ERROR, "Invalid date format. Please use YYYY-MM-DD.");
+        } catch (DuplicateException e) {
+            showAlert(Alert.AlertType.ERROR, e.getMessage());
         } catch (SQLException e) {
-            showAlert(Alert.AlertType.ERROR, "Error loading curd production data into table: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "An error occurred while saving Curd Production: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -389,7 +344,6 @@ public class CurdProductionController implements Initializable {
         }
     }
 
-
     public void tableOnClick(MouseEvent mouseEvent) {
         CurdProductionDto curdProductionDto = tblCurdProduction.getSelectionModel().getSelectedItem();
         if(curdProductionDto != null){
@@ -403,6 +357,10 @@ public class CurdProductionController implements Initializable {
             resetValidationStyles();
             updateButtonStates();
         }
+    }
+
+    public AnchorPane getAncCurdProduction(){
+        return ancCurdProduction;
     }
 
     public void btnGoToCurdProduOnAction(ActionEvent actionEvent) {
@@ -419,7 +377,7 @@ public class CurdProductionController implements Initializable {
             ancCurdProduction.getChildren().add(anchorPane);
         }catch (Exception e){
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "Something went wrong: " + e.getMessage(), ButtonType.OK).show();
+            showAlert(Alert.AlertType.ERROR, "Something went wrong during navigation: " + e.getMessage());
         }
     }
 
@@ -429,8 +387,7 @@ public class CurdProductionController implements Initializable {
 
     public void txtQuantityChange(KeyEvent keyEvent) {
         String qty = txtQuantity.getText();
-        boolean isValid = qty.matches(quantityPattern);
-        if (isValid) {
+        if (qty.matches(quantityPattern)) {
             txtQuantity.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtQuantity.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
@@ -440,8 +397,7 @@ public class CurdProductionController implements Initializable {
 
     public void txtIngredientsChange(KeyEvent keyEvent) {
         String ingredients = txtIngredients.getText();
-        boolean isValid = ingredients.matches(ingredientsPattern);
-        if (isValid) {
+        if (ingredients.matches(ingredientsPattern)) {
             txtIngredients.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtIngredients.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
@@ -451,8 +407,7 @@ public class CurdProductionController implements Initializable {
 
     public void txtProductionDateChange(KeyEvent keyEvent) {
         String date = txtProductionDate.getText();
-        boolean isValid = date.matches(datePattern);
-        if (isValid) {
+        if (date.matches(datePattern)) {
             txtProductionDate.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtProductionDate.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");
@@ -462,8 +417,7 @@ public class CurdProductionController implements Initializable {
 
     public void txtExpiryDateChange(KeyEvent keyEvent) {
         String date = txtExpiryDate.getText();
-        boolean isValid = date.matches(datePattern);
-        if (isValid) {
+        if (date.matches(datePattern)) {
             txtExpiryDate.setStyle("-fx-background-radius: 5; -fx-border-color: green; -fx-border-radius: 5;");
         } else {
             txtExpiryDate.setStyle("-fx-background-radius: 5; -fx-border-color: red; -fx-border-radius: 5;");

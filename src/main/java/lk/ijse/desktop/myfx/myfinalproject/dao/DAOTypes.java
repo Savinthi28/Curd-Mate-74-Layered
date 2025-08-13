@@ -16,5 +16,7 @@ public enum DAOTypes {
     REPORT,
     STOCK,
     SUPPLIER,
-    USER
+    USER,
+    ORDER,
+    ORDER_DETAILS
 }

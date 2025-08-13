@@ -16,5 +16,6 @@ public enum BOTypes {
     REPORT,
     STOCK,
     SUPPLIER,
-    USER
+    USER,
+    ORDER
 }

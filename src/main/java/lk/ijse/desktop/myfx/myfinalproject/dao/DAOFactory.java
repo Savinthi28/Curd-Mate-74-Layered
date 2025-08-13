@@ -30,6 +30,8 @@ public class DAOFactory {
             case STOCK -> new StockDAOImpl();
             case SUPPLIER -> new SupplierDAOImpl();
             case USER -> new UserDAOImpl();
+            case ORDER -> new OrderDAOImpl(); // NEW
+            case ORDER_DETAILS -> new OrderDetailsDAOImpl(); // NEW
         };
     }
 }

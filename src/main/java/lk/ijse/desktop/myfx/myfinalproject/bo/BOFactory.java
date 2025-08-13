@@ -30,7 +30,7 @@ public class BOFactory {
             case STOCK -> new StockBOImpl();
             case SUPPLIER -> new SupplierBOImpl();
             case USER -> new UserBOImpl();
-
+            case ORDER -> new OrderBOImpl();
         };
     }
 }

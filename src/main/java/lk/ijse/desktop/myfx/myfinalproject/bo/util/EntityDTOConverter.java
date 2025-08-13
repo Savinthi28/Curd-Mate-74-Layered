@@ -4,6 +4,7 @@ import lk.ijse.desktop.myfx.myfinalproject.Dto.*;
 import lk.ijse.desktop.myfx.myfinalproject.entity.*;
 
 public class EntityDTOConverter {
+
     public Customer getCustomer(CustomerDto dto) {
         return new Customer(
                 dto.getCustomerId(),
@@ -21,6 +22,7 @@ public class EntityDTOConverter {
                 customer.getCustomerNumber()
         );
     }
+
     public Buffalo getBuffalo(BuffaloDto dto) {
         return new Buffalo(
                 dto.getBuffaloID(),
@@ -30,6 +32,7 @@ public class EntityDTOConverter {
                 dto.getHealthStatus()
         );
     }
+
     public BuffaloDto getBuffaloDTO(Buffalo buffalo) {
         return new BuffaloDto(
                 buffalo.getBuffaloId(),
@@ -39,6 +42,7 @@ public class EntityDTOConverter {
                 buffalo.getHealthStatus()
         );
     }
+
     public CurdProduction getCurdProduction(CurdProductionDto dto) {
         return new CurdProduction(
                 dto.getProductionId(),
@@ -50,6 +54,7 @@ public class EntityDTOConverter {
                 dto.getStorageId()
         );
     }
+
     public CurdProductionDto getCurdProductionDTO(CurdProduction curdProduction) {
         return new CurdProductionDto(
                 curdProduction.getProductionId(),
@@ -61,6 +66,7 @@ public class EntityDTOConverter {
                 curdProduction.getStorageId()
         );
     }
+
     public DailyIncome getDailyIncome(DailyIncomeDto dto) {
         return new DailyIncome(
                 dto.getId(),
@@ -265,7 +271,6 @@ public class EntityDTOConverter {
         );
     }
 
-    // --- NEW: Stock Conversions ---
     public Stock getStock(StockDto dto) {
         return new Stock(
                 dto.getStockId(),
@@ -285,6 +290,7 @@ public class EntityDTOConverter {
                 stock.getStockType()
         );
     }
+
     public Supplier getSupplier(SupplierDto dto) {
         return new Supplier(
                 dto.getSupplierId(),
@@ -318,6 +324,41 @@ public class EntityDTOConverter {
                 user.getUserName(),
                 user.getPassword(),
                 user.getEmail()
+        );
+    }
+
+    public Order getOrder(OrderDto dto) {
+        return new Order(
+                dto.getOrderId(),
+                dto.getCustomerId(),
+                dto.getDate()
+        );
+    }
+
+    public OrderDto getOrderDTO(Order entity) {
+        return new OrderDto(
+                entity.getOrderId(),
+                entity.getCustomerId(),
+                entity.getOrderDate()
+        );
+    }
+
+    public OrderDetails getOrderDetails(OrderDetailsDto dto) {
+        return new OrderDetails(
+                dto.getOrderId(),
+                dto.getProductionId(),
+                dto.getQuantity(),
+                dto.getUnitPrice()
+        );
+    }
+
+    public OrderDetailsDto getOrderDetailsDTO(OrderDetails entity) {
+        return new OrderDetailsDto(
+                entity.getOrderId(),
+                entity.getProductionId(),
+                entity.getQuantity(),
+                entity.getUnitPrice(),
+                entity.getQuantity() * entity.getUnitPrice()
         );
     }
 }

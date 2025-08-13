@@ -74,19 +74,19 @@ public class OrderModel {
         return tableChar + "001";
     }
 
-    public ArrayList<OrderDto> viewAllOrder() throws SQLException {
-        ResultSet rs = CrudUtil.execute("SELECT * FROM Orders");
-        ArrayList<OrderDto> orders = new ArrayList<>();
-        while (rs.next()) {
-            OrderDto orderDto = new OrderDto(
-                    rs.getString("Order_ID"),
-                    rs.getString("Customer_ID"),
-                    rs.getString("Order_Date")
-            );
-            orders.add(orderDto);
-        }
-        return orders;
-    }
+//    public ArrayList<OrderDto> viewAllOrder() throws SQLException {
+//        ResultSet rs = CrudUtil.execute("SELECT * FROM Orders");
+//        ArrayList<OrderDto> orders = new ArrayList<>();
+//        while (rs.next()) {
+//            OrderDto orderDto = new OrderDto(
+//                    rs.getString("Order_ID"),
+//                    rs.getString("Customer_ID"),
+//                    rs.getString("Order_Date")
+//            );
+//            orders.add(orderDto);
+//        }
+//        return orders;
+//    }
     public boolean saveOrder(OrderDto orderDto) throws SQLException, ClassNotFoundException {
         return CrudUtil.execute(
                 "insert into Orders values (?,?,?)",

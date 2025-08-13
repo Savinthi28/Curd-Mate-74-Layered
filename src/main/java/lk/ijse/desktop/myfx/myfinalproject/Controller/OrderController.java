@@ -8,110 +8,92 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
-import lk.ijse.desktop.myfx.myfinalproject.DBConnection.DBConnection;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.CurdProductionDto;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.CustomerDto;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.OrderDetailsDto;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.OrderDto;
 import lk.ijse.desktop.myfx.myfinalproject.Dto.TM.CartTM;
-import lk.ijse.desktop.myfx.myfinalproject.Model.CurdProductionModel;
-import lk.ijse.desktop.myfx.myfinalproject.Model.CustomerModel;
-import lk.ijse.desktop.myfx.myfinalproject.Model.OrderModel;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOFactory;
+import lk.ijse.desktop.myfx.myfinalproject.bo.BOTypes;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.CurdProductionBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.CustomerBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.custom.OrderBO;
+import lk.ijse.desktop.myfx.myfinalproject.bo.exception.NotFoundException;
 
 import java.net.URL;
-import java.sql.Date;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 
 
 public class OrderController implements Initializable {
-    @FXML
-    private TableColumn<CartTM, String> colAction;
+    // BO instances
+    private final OrderBO orderBO = BOFactory.getInstance().getBO(BOTypes.ORDER);
+    private final CustomerBO customerBO = BOFactory.getInstance().getBO(BOTypes.CUSTOMER);
+    private final CurdProductionBO curdProductionBO = BOFactory.getInstance().getBO(BOTypes.CURD_PRODUCTION);
 
-    @FXML
-    private TableColumn<CartTM, String> colItemId;
-
-    @FXML
-    private TableColumn<CartTM, String> colItemName;
-
-    @FXML
-    private TableColumn<CartTM, Integer> colQty;
-
-    @FXML
-    private TableColumn<CartTM, Double> colTotalPrice;
-
-    @FXML
-    private TableColumn<CartTM, Double> colUnitPrice;
-
-    @FXML
-    private ComboBox<String> comCustomerID;
-
-    @FXML
-    private Label lblCustomerName;
-
-    @FXML
-    private Label lblCustomerName1;
-
-    @FXML
-    private TextField txtUnitPrice;
-
-    @FXML
-    private Label lblID;
-
-    @FXML
-    private Label lblItemName;
-
-    @FXML
-    private TextField txtQuantity;
-
-    @FXML
-    private Label lbl_Order_Date;
-
-    @FXML
-    private Label lblItemQty;
-
-    @FXML
-    private ComboBox<String> comProductionId;
-
-    @FXML
-    private TableView<CartTM> table;
+    @FXML private TableColumn<CartTM, String> colAction;
+    @FXML private TableColumn<CartTM, String> colItemId;
+    @FXML private TableColumn<CartTM, String> colItemName; // This is actually PotsSize
+    @FXML private TableColumn<CartTM, Integer> colQty;
+    @FXML private TableColumn<CartTM, Double> colTotalPrice;
+    @FXML private TableColumn<CartTM, Double> colUnitPrice;
+    @FXML private ComboBox<String> comCustomerID;
+    @FXML private Label lblCustomerName;
+    @FXML private Label lblID; // Order ID
+    @FXML private Label lblItemName; // Curd Production Pots Size
+    @FXML private TextField txtQuantity;
+    @FXML private Label lbl_Order_Date;
+    @FXML private Label lblItemQty; // Current available quantity of the selected item
+    @FXML private ComboBox<String> comProductionId;
+    @FXML private TableView<CartTM> table;
+    @FXML private TextField txtUnitPrice; // Unit Price of the selected item
 
     private final ObservableList<CartTM> cartData = FXCollections.observableArrayList();
+    private int currentItemQtyOnHand = 0; // To keep track of the available quantity for the selected item
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
+        setCellValueFactories();
+        table.setItems(cartData);
+
+        try {
+            lbl_Order_Date.setText(LocalDate.now().toString());
+            loadCustomerId();
+            loadNextOrderId();
+            loadProductionIds();
+        } catch (SQLException e) {
+            new Alert(Alert.AlertType.ERROR, "Initialization error: " + e.getMessage()).show();
+            throw new RuntimeException("Failed to initialize order controller: " + e.getMessage(), e);
+        }
+    }
+
+    private void setCellValueFactories() {
         colItemId.setCellValueFactory(new PropertyValueFactory<>("productionId"));
         colItemName.setCellValueFactory(new PropertyValueFactory<>("potsSize"));
         colQty.setCellValueFactory(new PropertyValueFactory<>("qty"));
         colUnitPrice.setCellValueFactory(new PropertyValueFactory<>("unitPrice"));
         colTotalPrice.setCellValueFactory(new PropertyValueFactory<>("totalPrice"));
         colAction.setCellValueFactory(new PropertyValueFactory<>("btnRemove"));
-        table.setItems(cartData);
-
-        try {
-            lbl_Order_Date.setText(LocalDate.now().toString());
-            loadCustomerId();
-            loadNextId();
-            loadProductionIds();
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to initialize order controller: " + e.getMessage(), e);
-        }
     }
 
     private void loadProductionIds() throws SQLException {
-        ArrayList<String> productionIdList = CurdProductionModel.getAllProductionIds();
+        List<String> productionIdList = curdProductionBO.getAllCurdProductionIds();
         ObservableList<String> ProductionIds = FXCollections.observableArrayList(productionIdList);
-
         comProductionId.setItems(ProductionIds);
     }
 
     private void loadCustomerId() throws SQLException {
-        ArrayList<String> customerId = OrderModel.getAllCustomerId();
-        ObservableList<String> observableList = FXCollections.observableArrayList(customerId);
-
+        List<CustomerDto> customerList = customerBO.getAllCustomer();
+        List<String> customerIds = new ArrayList<>();
+        for (CustomerDto customer : customerList) {
+            customerIds.add(customer.getCustomerId());
+        }
+        ObservableList<String> observableList = FXCollections.observableArrayList(customerIds);
         comCustomerID.setItems(observableList);
     }
 
@@ -120,28 +102,63 @@ public class OrderController implements Initializable {
         clearFields();
     }
 
-    private void loadNextId() throws SQLException {
-        OrderModel orderModel = new OrderModel();
-        String id = orderModel.getNextId();
+    private void loadNextOrderId() throws SQLException {
+        String id = orderBO.getNextOrderId();
         lblID.setText(id);
     }
 
-    public void comCustomerOnAction(ActionEvent actionEvent) throws SQLException {
+    @FXML
+    public void comCustomerOnAction(ActionEvent actionEvent) {
         String selectedCustomerId = comCustomerID.getSelectionModel().getSelectedItem();
         if (selectedCustomerId != null && !selectedCustomerId.isEmpty()) {
-            System.out.println(selectedCustomerId);
-            String name = CustomerModel.findNameById(selectedCustomerId);
-            System.out.println(name);
-            lblCustomerName.setText(name);
+            try {
+                String customerName = customerBO.findCustomerNameById(selectedCustomerId);
+                lblCustomerName.setText(customerName);
+            } catch (SQLException e) {
+                new Alert(Alert.AlertType.ERROR, "Error fetching customer details: " + e.getMessage()).show();
+                e.printStackTrace();
+            } catch (NotFoundException e) {
+                lblCustomerName.setText("Customer not found.");
+                new Alert(Alert.AlertType.WARNING, e.getMessage()).show();
+            }
         } else {
             lblCustomerName.setText("");
         }
     }
 
-    public void comPotsSizeOnAction(ActionEvent actionEvent) {
+    @FXML
+    public void comProductionIdOnAction(ActionEvent actionEvent) {
+        String selectedItemId = comProductionId.getValue();
+        if (selectedItemId != null && !selectedItemId.isEmpty()) {
+            try {
+                CurdProductionDto product = curdProductionBO.findCurdProductionById(selectedItemId);
+                if (product != null) {
+                    lblItemName.setText(String.valueOf(product.getPotsSize())); // Display Pots Size as Item Name
+                    lblItemQty.setText(String.valueOf(product.getQuantity())); // Display Available Quantity
+                    txtUnitPrice.setText(String.valueOf(product.getPotsSize() * 10.0)); // Assuming a price logic based on pot size, e.g., PotsSize * 10.0
+                    currentItemQtyOnHand = product.getQuantity(); // Store original quantity
 
-        String selectedCustomerId = comCustomerID.getSelectionModel().getSelectedItem();
-        System.out.println(selectedCustomerId);
+                    // Adjust lblItemQty based on what's already in the cart for this item
+                    int qtyInCartForThisProduct = getTotalQuantityInCartForProduct(selectedItemId);
+                    lblItemQty.setText(String.valueOf(currentItemQtyOnHand - qtyInCartForThisProduct));
+
+                } else {
+                    lblItemName.setText("");
+                    lblItemQty.setText("");
+                    txtUnitPrice.setText("");
+                    currentItemQtyOnHand = 0;
+                    new Alert(Alert.AlertType.WARNING, "Production item details not found.").show();
+                }
+            } catch (SQLException e) {
+                new Alert(Alert.AlertType.ERROR, "Error fetching item details: " + e.getMessage()).show();
+                e.printStackTrace();
+            }
+        } else {
+            lblItemName.setText("");
+            lblItemQty.setText("");
+            txtUnitPrice.setText("");
+            currentItemQtyOnHand = 0;
+        }
     }
 
     private void clearFields() {
@@ -154,30 +171,32 @@ public class OrderController implements Initializable {
         txtQuantity.setText("");
         cartData.clear();
         try {
-            loadNextId();
+            loadNextOrderId();
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Error generating next order ID: " + e.getMessage()).show();
             e.printStackTrace();
         }
+        lbl_Order_Date.setText(LocalDate.now().toString());
     }
 
+    @FXML
     public void btnAddToCartOnAction(ActionEvent actionEvent) {
         try {
             String selectedItemId = comProductionId.getValue();
             String cartQtyString = txtQuantity.getText();
 
             if (selectedItemId == null || selectedItemId.isEmpty()) {
-                new Alert(Alert.AlertType.WARNING, "Please select a production item").show();
+                new Alert(Alert.AlertType.WARNING, "Please select a production item.").show();
                 return;
             }
             if (!cartQtyString.matches("^[0-9]+$") || cartQtyString.isEmpty()) {
-                new Alert(Alert.AlertType.WARNING, "Please enter a valid quantity (numbers only)").show();
+                new Alert(Alert.AlertType.WARNING, "Please enter a valid quantity (numbers only).").show();
                 return;
             }
             int cartQty = Integer.parseInt(cartQtyString);
 
             if (cartQty <= 0) {
-                new Alert(Alert.AlertType.WARNING, "Quantity must be positive").show();
+                new Alert(Alert.AlertType.WARNING, "Quantity must be positive.").show();
                 return;
             }
 
@@ -189,7 +208,7 @@ public class OrderController implements Initializable {
                 return;
             }
 
-            String itemName = lblItemName.getText();
+            String itemName = lblItemName.getText(); // This is PotsSize now
             double unitPrice;
             try {
                 unitPrice = Double.parseDouble(txtUnitPrice.getText());
@@ -200,59 +219,86 @@ public class OrderController implements Initializable {
 
             double total = unitPrice * cartQty;
 
-            for (CartTM existingItem : cartData) {
-                if (existingItem.getProductionId().equals(selectedItemId)) {
-                    int newQty = existingItem.getQty() + cartQty;
+            // Check if item already exists in cart and update quantity
+            Optional<CartTM> existingCartItem = cartData.stream()
+                    .filter(item -> item.getProductionId().equals(selectedItemId))
+                    .findFirst();
 
-                    int originalStock = currentAvailableQty + existingItem.getQty();
+            if (existingCartItem.isPresent()) {
+                CartTM item = existingCartItem.get();
+                int newQty = item.getQty() + cartQty;
 
-                    if (newQty > originalStock) {
-                        new Alert(Alert.AlertType.WARNING, "Cannot add more than available stock. Available: " +
-                                (originalStock - existingItem.getQty())).show();
-                        return;
-                    }
-                    existingItem.setQty(newQty);
-                    existingItem.setTotalPrice(newQty * unitPrice);
-                    lblItemQty.setText(String.valueOf(originalStock - newQty));
-                    txtQuantity.clear();
-                    table.refresh();
+                // Re-calculate available stock by adding back what was in the cart for this item initially
+                int stockAfterAddingBack = currentAvailableQty + item.getQty();
+
+                if (newQty > stockAfterAddingBack) {
+                    new Alert(Alert.AlertType.WARNING, "Cannot add more than available stock. Available: " + (stockAfterAddingBack - item.getQty())).show();
                     return;
                 }
+                item.setQty(newQty);
+                item.setTotalPrice(newQty * unitPrice);
+                lblItemQty.setText(String.valueOf(stockAfterAddingBack - newQty)); // Update UI quantity
+            } else {
+                if (cartQty > currentAvailableQty) {
+                    new Alert(Alert.AlertType.WARNING, "Cannot add more than available stock. Available: " + currentAvailableQty).show();
+                    return;
+                }
+                Button removeBtn = new Button("Remove");
+                CartTM newItem = new CartTM(
+                        selectedItemId,
+                        itemName, // PotsSize as Item Name
+                        cartQty,
+                        unitPrice,
+                        total,
+                        removeBtn
+                );
+
+                removeBtn.setOnAction((ActionEvent event) -> {
+                    // When remove button is clicked, add back the quantity to lblItemQty (UI only)
+                    int removedQty = newItem.getQty();
+                    // Get the actual available quantity from the BO for the current item selected in ComboBox,
+                    // or if not selected, try to fetch its original quantity.
+                    try {
+                        CurdProductionDto product = curdProductionBO.findCurdProductionById(newItem.getProductionId());
+                        if (product != null) {
+                            int originalProductQty = product.getQuantity();
+                            // If the removed item is the one currently selected in the combobox, update its displayed quantity
+                            if (comProductionId.getValue() != null && comProductionId.getValue().equals(newItem.getProductionId())) {
+                                lblItemQty.setText(String.valueOf(originalProductQty - getTotalQuantityInCartForProduct(newItem.getProductionId()) + removedQty));
+                            }
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace(); // Log the error but don't stop UI update
+                    }
+
+                    cartData.remove(newItem);
+                    table.refresh();
+                });
+                lblItemQty.setText(String.valueOf(currentAvailableQty - cartQty)); // Update UI quantity
+                cartData.add(newItem);
             }
-            if (cartQty > currentAvailableQty) {
-                new Alert(Alert.AlertType.WARNING, "Cannot add more than available stock. Available: " + currentAvailableQty).show();
-                return;
-            }
 
-            Button removeBtn = new Button("Remove");
-            CartTM newItem = new CartTM(
-                    selectedItemId,
-                    itemName,
-                    cartQty,
-                    unitPrice,
-                    total,
-                    removeBtn
-            );
-
-            removeBtn.setOnAction((ActionEvent event) -> {
-
-                int currentStockDisplay = Integer.parseInt(lblItemQty.getText());
-                lblItemQty.setText(String.valueOf(currentStockDisplay + newItem.getQty()));
-                cartData.remove(newItem);
-                table.refresh();
-            });
-
-            lblItemQty.setText(String.valueOf(currentAvailableQty - cartQty));
-            cartData.add(newItem);
             txtQuantity.clear();
-            table.refresh();
-
+            table.refresh(); // Refresh table to show updated quantities/items
         } catch (Exception e) {
             new Alert(Alert.AlertType.ERROR, "Something went wrong adding to cart: " + e.getMessage()).show();
             e.printStackTrace();
         }
     }
 
+    // Helper method to get total quantity of a product currently in the cart
+    private int getTotalQuantityInCartForProduct(String productId) {
+        int totalQty = 0;
+        for (CartTM item : cartData) {
+            if (item.getProductionId().equals(productId)) {
+                totalQty += item.getQty();
+            }
+        }
+        return totalQty;
+    }
+
+
+    @FXML
     public void btnPlaceOrder0nAction(ActionEvent actionEvent) {
         if (table.getItems().isEmpty()) {
             new Alert(Alert.AlertType.WARNING, "Please add items to the cart before placing an order.").show();
@@ -265,13 +311,14 @@ public class OrderController implements Initializable {
 
         String selectedCustomerId = comCustomerID.getValue();
         String orderId = lblID.getText();
-        Date date = Date.valueOf(lbl_Order_Date.getText());
+        LocalDate date = LocalDate.parse(lbl_Order_Date.getText());
 
         ArrayList<OrderDetailsDto> cartList = new ArrayList<>();
         int orderTotalQuantity = 0;
 
         for (CartTM cartTM : cartData) {
             orderTotalQuantity += cartTM.getQty();
+
             OrderDetailsDto orderDetailsDto = new OrderDetailsDto(
                     orderId,
                     cartTM.getProductionId(),
@@ -290,46 +337,29 @@ public class OrderController implements Initializable {
                 cartList
         );
         try {
-            boolean isPlaced = OrderModel.placeOrder(orderDto);
+            boolean isPlaced = orderBO.placeOrder(orderDto);
             if (isPlaced) {
                 new Alert(Alert.AlertType.INFORMATION, "Order Placed Successfully!").show();
                 clearFields();
             } else {
                 new Alert(Alert.AlertType.ERROR, "Order Not Placed. Please check details.").show();
             }
+        } catch (SQLException e) {
+            new Alert(Alert.AlertType.ERROR, "Database error occurred while placing the order: " + e.getMessage()).show();
+            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
-            new Alert(Alert.AlertType.ERROR, "An error occurred while placing the order: " + e.getMessage()).show();
+            new Alert(Alert.AlertType.ERROR, "An unexpected error occurred while placing the order: " + e.getMessage()).show();
         }
     }
 
+    @FXML
     public void btnResetOnAction(ActionEvent actionEvent) {
         clearFields();
     }
 
+    @FXML
     public void tableOnClick(MouseEvent mouseEvent) {
-
+        // No specific action needed here for "Place Order" flow.
     }
-
-//    public void comProductionIdOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
-//
-//        String selectedItemId = comProductionId.getValue();
-//        if (selectedItemId != null && !selectedItemId.isEmpty()) {
-//            CurdProductionDto product = CurdProductionModel.findById(selectedItemId);
-//            if (product != null) {
-//                lblItemName.setText(String.valueOf(product.getPotsSize()));
-//                lblItemQty.setText(String.valueOf(product.getQuantity()));
-//
-//            } else {
-//                lblItemName.setText("");
-//                lblItemQty.setText("");
-//                txtUnitPrice.setText("");
-//                new Alert(Alert.AlertType.WARNING, "Production item details not found.").show();
-//            }
-//        } else {
-//            lblItemName.setText("");
-//            lblItemQty.setText("");
-//            txtUnitPrice.setText("");
-//        }
-//    }
 }
