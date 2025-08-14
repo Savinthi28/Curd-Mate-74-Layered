@@ -106,7 +106,6 @@ public class CurdProductionBOImpl implements CurdProductionBO {
 
     @Override
     public boolean reduceCurdQuantity(String productionId, int quantity) throws SQLException {
-        // Business logic for reducing quantity, e.g., check if sufficient quantity exists
         Optional<CurdProduction> curdProduction = curdProductionDAO.findById(productionId);
         if (curdProduction.isEmpty()) {
             throw new NotFoundException("Curd Production with ID " + productionId + " not found for quantity reduction.");

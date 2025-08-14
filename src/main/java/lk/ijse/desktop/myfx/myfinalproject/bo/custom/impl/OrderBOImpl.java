@@ -29,51 +29,46 @@ public class OrderBOImpl implements OrderBO {
 
     @Override
     public boolean placeOrder(OrderDto orderDto) throws SQLException {
-        Connection connection = null; // Declare connection outside try-with-resources to use in catch block
+        Connection connection = null;
         try {
-            connection = DBConnection.getInstance().getConnection(); // Get connection from DBConnection
-            connection.setAutoCommit(false); // Start transaction
+            connection = DBConnection.getInstance().getConnection();
+            connection.setAutoCommit(false);
 
-            // 1. Save the Order (Main Order record)
             Order orderEntity = converter.getOrder(orderDto);
-            boolean isOrderSaved = orderDAO.save(orderEntity); // Pass connection to DAO
+            boolean isOrderSaved = orderDAO.save(orderEntity);
             if (!isOrderSaved) {
                 connection.rollback();
                 return false;
             }
 
-            // 2. Save Order Details and Update Product Quantities
             for (OrderDetailsDto detailDto : orderDto.getCartList()) {
                 OrderDetails orderDetailsEntity = converter.getOrderDetails(detailDto);
-                boolean isDetailsSaved = orderDetailsDAO.save(orderDetailsEntity); // Pass connection
+                boolean isDetailsSaved = orderDetailsDAO.save(orderDetailsEntity);
                 if (!isDetailsSaved) {
                     connection.rollback();
                     return false;
                 }
 
-                // Reduce the quantity of the curd production
-                boolean isQtyReduced = curdProductionDAO.reduceQuantity(detailDto.getProductionId(), detailDto.getQuantity()); // Pass connection
+                boolean isQtyReduced = curdProductionDAO.reduceQuantity(detailDto.getProductionId(), detailDto.getQuantity());
                 if (!isQtyReduced) {
                     connection.rollback();
-                    // Optional: You can throw a more specific exception like InsufficientStockException here
                     throw new SQLException("Insufficient stock for product ID: " + detailDto.getProductionId());
                 }
             }
 
-            connection.commit(); // Commit transaction if all operations are successful
+            connection.commit();
             return true;
 
         } catch (SQLException e) {
             if (connection != null) {
                 try {
-                    connection.rollback(); // Rollback on any SQL exception
+                    connection.rollback();
                 } catch (SQLException rollbackEx) {
                     System.err.println("Error during rollback: " + rollbackEx.getMessage());
                 }
             }
-            throw e; // Re-throw the original exception
+            throw e;
         } catch (Exception e) {
-            // Catch any other unexpected exceptions and rollback
             if (connection != null) {
                 try {
                     connection.rollback();
@@ -81,15 +76,11 @@ public class OrderBOImpl implements OrderBO {
                     System.err.println("Error during rollback (general exception): " + rollbackEx.getMessage());
                 }
             }
-            throw new SQLException("An unexpected error occurred during order placement: " + e.getMessage(), e); // Wrap and re-throw
+            throw new SQLException("An unexpected error occurred during order placement: " + e.getMessage(), e);
         } finally {
             if (connection != null) {
                 try {
-                    connection.setAutoCommit(true); // Always set auto-commit back to true
-                    // Note: Do NOT close the connection here if it's managed by a pool or a singleton.
-                    // The DBConnection.getInstance().getConnection() usually provides a shared connection.
-                    // Closing it here would affect subsequent operations.
-                    // If you manage connections per transaction (e.g., using a thread-local connection), then close it here.
+                    connection.setAutoCommit(true);
                 } catch (SQLException e) {
                     System.err.println("Error resetting auto-commit or closing connection: " + e.getMessage());
                 }

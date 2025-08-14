@@ -29,32 +29,31 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 
-
 public class OrderController implements Initializable {
-    // BO instances
+
     private final OrderBO orderBO = BOFactory.getInstance().getBO(BOTypes.ORDER);
     private final CustomerBO customerBO = BOFactory.getInstance().getBO(BOTypes.CUSTOMER);
     private final CurdProductionBO curdProductionBO = BOFactory.getInstance().getBO(BOTypes.CURD_PRODUCTION);
 
     @FXML private TableColumn<CartTM, String> colAction;
     @FXML private TableColumn<CartTM, String> colItemId;
-    @FXML private TableColumn<CartTM, String> colItemName; // This is actually PotsSize
+    @FXML private TableColumn<CartTM, String> colItemName;
     @FXML private TableColumn<CartTM, Integer> colQty;
     @FXML private TableColumn<CartTM, Double> colTotalPrice;
     @FXML private TableColumn<CartTM, Double> colUnitPrice;
     @FXML private ComboBox<String> comCustomerID;
     @FXML private Label lblCustomerName;
-    @FXML private Label lblID; // Order ID
-    @FXML private Label lblItemName; // Curd Production Pots Size
+    @FXML private Label lblID;
+    @FXML private Label lblItemName;
     @FXML private TextField txtQuantity;
     @FXML private Label lbl_Order_Date;
-    @FXML private Label lblItemQty; // Current available quantity of the selected item
+    @FXML private Label lblItemQty;
     @FXML private ComboBox<String> comProductionId;
     @FXML private TableView<CartTM> table;
-    @FXML private TextField txtUnitPrice; // Unit Price of the selected item
+    @FXML private TextField txtUnitPrice;
 
     private final ObservableList<CartTM> cartData = FXCollections.observableArrayList();
-    private int currentItemQtyOnHand = 0; // To keep track of the available quantity for the selected item
+    private int currentItemQtyOnHand = 0;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -133,12 +132,10 @@ public class OrderController implements Initializable {
             try {
                 CurdProductionDto product = curdProductionBO.findCurdProductionById(selectedItemId);
                 if (product != null) {
-                    lblItemName.setText(String.valueOf(product.getPotsSize())); // Display Pots Size as Item Name
-                    lblItemQty.setText(String.valueOf(product.getQuantity())); // Display Available Quantity
-                    txtUnitPrice.setText(String.valueOf(product.getPotsSize() * 10.0)); // Assuming a price logic based on pot size, e.g., PotsSize * 10.0
-                    currentItemQtyOnHand = product.getQuantity(); // Store original quantity
-
-                    // Adjust lblItemQty based on what's already in the cart for this item
+                    lblItemName.setText(String.valueOf(product.getPotsSize()));
+                    lblItemQty.setText(String.valueOf(product.getQuantity()));
+                    txtUnitPrice.setText(String.valueOf(product.getPotsSize() * 10.0));
+                    currentItemQtyOnHand = product.getQuantity();
                     int qtyInCartForThisProduct = getTotalQuantityInCartForProduct(selectedItemId);
                     lblItemQty.setText(String.valueOf(currentItemQtyOnHand - qtyInCartForThisProduct));
 
@@ -208,7 +205,7 @@ public class OrderController implements Initializable {
                 return;
             }
 
-            String itemName = lblItemName.getText(); // This is PotsSize now
+            String itemName = lblItemName.getText();
             double unitPrice;
             try {
                 unitPrice = Double.parseDouble(txtUnitPrice.getText());
@@ -219,7 +216,6 @@ public class OrderController implements Initializable {
 
             double total = unitPrice * cartQty;
 
-            // Check if item already exists in cart and update quantity
             Optional<CartTM> existingCartItem = cartData.stream()
                     .filter(item -> item.getProductionId().equals(selectedItemId))
                     .findFirst();
@@ -228,7 +224,6 @@ public class OrderController implements Initializable {
                 CartTM item = existingCartItem.get();
                 int newQty = item.getQty() + cartQty;
 
-                // Re-calculate available stock by adding back what was in the cart for this item initially
                 int stockAfterAddingBack = currentAvailableQty + item.getQty();
 
                 if (newQty > stockAfterAddingBack) {
@@ -237,7 +232,7 @@ public class OrderController implements Initializable {
                 }
                 item.setQty(newQty);
                 item.setTotalPrice(newQty * unitPrice);
-                lblItemQty.setText(String.valueOf(stockAfterAddingBack - newQty)); // Update UI quantity
+                lblItemQty.setText(String.valueOf(stockAfterAddingBack - newQty));
             } else {
                 if (cartQty > currentAvailableQty) {
                     new Alert(Alert.AlertType.WARNING, "Cannot add more than available stock. Available: " + currentAvailableQty).show();
@@ -246,7 +241,7 @@ public class OrderController implements Initializable {
                 Button removeBtn = new Button("Remove");
                 CartTM newItem = new CartTM(
                         selectedItemId,
-                        itemName, // PotsSize as Item Name
+                        itemName,
                         cartQty,
                         unitPrice,
                         total,
@@ -254,39 +249,34 @@ public class OrderController implements Initializable {
                 );
 
                 removeBtn.setOnAction((ActionEvent event) -> {
-                    // When remove button is clicked, add back the quantity to lblItemQty (UI only)
                     int removedQty = newItem.getQty();
-                    // Get the actual available quantity from the BO for the current item selected in ComboBox,
-                    // or if not selected, try to fetch its original quantity.
                     try {
                         CurdProductionDto product = curdProductionBO.findCurdProductionById(newItem.getProductionId());
                         if (product != null) {
                             int originalProductQty = product.getQuantity();
-                            // If the removed item is the one currently selected in the combobox, update its displayed quantity
                             if (comProductionId.getValue() != null && comProductionId.getValue().equals(newItem.getProductionId())) {
                                 lblItemQty.setText(String.valueOf(originalProductQty - getTotalQuantityInCartForProduct(newItem.getProductionId()) + removedQty));
                             }
                         }
                     } catch (SQLException e) {
-                        e.printStackTrace(); // Log the error but don't stop UI update
+                        e.printStackTrace();
                     }
 
                     cartData.remove(newItem);
                     table.refresh();
                 });
-                lblItemQty.setText(String.valueOf(currentAvailableQty - cartQty)); // Update UI quantity
+                lblItemQty.setText(String.valueOf(currentAvailableQty - cartQty));
                 cartData.add(newItem);
             }
 
             txtQuantity.clear();
-            table.refresh(); // Refresh table to show updated quantities/items
+            table.refresh();
         } catch (Exception e) {
             new Alert(Alert.AlertType.ERROR, "Something went wrong adding to cart: " + e.getMessage()).show();
             e.printStackTrace();
         }
     }
 
-    // Helper method to get total quantity of a product currently in the cart
     private int getTotalQuantityInCartForProduct(String productId) {
         int totalQty = 0;
         for (CartTM item : cartData) {
@@ -360,6 +350,5 @@ public class OrderController implements Initializable {
 
     @FXML
     public void tableOnClick(MouseEvent mouseEvent) {
-        // No specific action needed here for "Place Order" flow.
     }
 }

@@ -39,36 +39,13 @@ public class OrderDAOImpl implements OrderDAO {
         return Optional.empty();
     }
 
-
-//    public boolean save(Order entity, Connection connection) throws SQLException {
-//        return SQLUtil.execute(
-//                "INSERT INTO Orders (Order_ID, Customer_ID, Order_Date) VALUES (?,?,?)",
-//                connection, // Pass connection
-//                entity.getOrderId(),
-//                entity.getCustomerId(),
-//                entity.getOrderDate()
-//        );
-//    }
-
     @Override
     public boolean save(Order entity) throws SQLException {
-        // This should primarily be used for non-transactional single saves if needed
         return SQLUtil.execute(
                 "INSERT INTO Orders (Order_ID, Customer_ID, Order_Date) VALUES (?,?,?)",
                 entity.getOrderId(),
                 entity.getCustomerId(),
                 entity.getOrderDate()
-        );
-    }
-
-
-    public boolean update(Order entity, Connection connection) throws SQLException {
-        return SQLUtil.execute(
-                "UPDATE Orders SET Customer_ID = ?, Order_Date = ? WHERE Order_ID = ?",
-                connection, // Pass connection
-                entity.getCustomerId(),
-                entity.getOrderDate(),
-                entity.getOrderId()
         );
     }
 
@@ -80,11 +57,6 @@ public class OrderDAOImpl implements OrderDAO {
                 entity.getOrderDate(),
                 entity.getOrderId()
         );
-    }
-
-
-    public boolean delete(String id, Connection connection) throws SQLException {
-        return SQLUtil.execute("DELETE FROM Orders WHERE Order_ID = ?", connection, id);
     }
 
     @Override
@@ -108,7 +80,6 @@ public class OrderDAOImpl implements OrderDAO {
 
     @Override
     public List<String> getAllIds() throws SQLException {
-        // Assuming you need a list of all order IDs
         ResultSet rs = SQLUtil.execute("SELECT Order_ID FROM Orders");
         List<String> orderIds = new ArrayList<>();
         while(rs.next()){
